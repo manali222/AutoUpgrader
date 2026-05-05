@@ -6,17 +6,81 @@ Fully automated Magento version migration with modern admin UI, real-time progre
 
 ---
 
+## Screenshots
+
+### Step 1: Select Target Version
+![Dashboard Overview](docs/screenshots/01-dashboard-overview.png)
+
+Select your target Magento version from the dropdown. Patches and security updates are listed automatically.
+
+![Version Selected](docs/screenshots/02-step1-version-select.png)
+
+Shows upgrade path (2.4.8 → 2.4.8-p4) and PHP requirements.
+
+---
+
+### Step 2: Compatibility Scan
+![Scanning](docs/screenshots/03-step2-scanning.png)
+
+Real-time scan of your codebase with terminal-style log output.
+
+---
+
+### Step 3: Review & Auto-Fix
+![Review Results](docs/screenshots/04-step3-review.png)
+
+Summary cards show Critical, Warnings, Auto-Fixable, and Total Issues. The **"Apply All Auto-Fixes"** button fixes all auto-fixable issues in one click.
+
+![Readiness Panel](docs/screenshots/06-readiness-panel.png)
+
+**Upgrade Readiness** panel with green/red/yellow indicators. Critical issues block the upgrade.
+
+![After Auto-Fix](docs/screenshots/05-autofix-button.png)
+
+After applying auto-fixes: Auto-Fixable drops to 0, all readiness checks turn green.
+
+![Issues Table](docs/screenshots/07-issues-table.png)
+
+Issues table showing severity, file location, description, and **Fixed** status after auto-fix.
+
+![Extensions](docs/screenshots/08-extensions-table.png)
+
+Extension compatibility table showing current version, compatible version, and status.
+
+---
+
+### Step 4: Confirm Upgrade
+![Confirm](docs/screenshots/09-step4-confirm.png)
+
+Review upgrade summary: source/target version, issues to auto-fix, extensions to upgrade.
+
+![Confirm Steps](docs/screenshots/09b-step4-confirm-bottom.png)
+
+Full list of automated steps with the **"Start Automated Upgrade Now"** button.
+
+---
+
+### Step 5: Live Progress
+![Progress](docs/screenshots/10-step5-progress.png)
+
+Real-time upgrade progress with animated timeline.
+
+![Progress Timeline](docs/screenshots/10b-step5-progress-bottom.png)
+
+All 9 upgrade steps: Backup → Auto-Fix → Extensions → Composer → Setup → Compile → Static Deploy → Cache → Verify.
+
+---
+
 ## Features
 
-- **Version Selector** — Fetches available Magento versions from Packagist, shows patches & security updates
+- **Step-by-Step Wizard** — 6-step guided upgrade process with modern UI
 - **Compatibility Scanner** — Scans custom code for deprecated classes, methods, PHP incompatibilities, plugin conflicts, template overrides, and composer constraints
-- **Auto-Fix Engine** — Automatically fixes detected issues (deprecated class replacements, PHP function updates, loosened composer constraints)
-- **Extension Manager** — Finds compatible versions for all 3rd-party extensions and upgrades them
+- **Auto-Fix Engine** — One-click fix for all auto-fixable issues (deprecated classes, methods, PHP functions, composer constraints)
+- **Upgrade Readiness Gating** — Blocks upgrade until all critical issues are resolved
+- **Extension Manager** — Finds compatible versions for all 3rd-party extensions
 - **Real-Time Progress** — Animated step-by-step timeline with live status updates
-- **User Confirmation** — Always asks before executing; shows full upgrade plan first
 - **Backup & Rollback** — Full backup (database + files) before upgrade, one-click rollback
 - **CLI Support** — `autoupgrader:scan`, `autoupgrader:upgrade`, `autoupgrader:rollback`
-- **Modern Admin UI** — Clean dashboard with cards, progress bars, modals, and responsive design
 
 ---
 
@@ -59,7 +123,7 @@ Navigate to **Admin > AutoUpgrader** in the sidebar:
 
 | Menu Item | Description |
 |-----------|-------------|
-| Upgrade Dashboard | Select version, run scan, confirm & execute upgrade |
+| Upgrade Dashboard | 6-step wizard: select version, scan, review, confirm, upgrade, done |
 | Compatibility Scan | Detailed scan with file-level issues and extension table |
 | Upgrade History | Grid listing all past upgrades with status |
 
@@ -81,14 +145,16 @@ bin/magento autoupgrader:rollback <upgrade_id>
 
 ---
 
-## Upgrade Workflow
+## Auto-Fix Capabilities
 
-1. **Select version** — Pick target from dropdown (includes patches)
-2. **Scan** — Finds impacted files, deprecated code, extension issues
-3. **Review** — Shows severity, auto-fix availability, extension compatibility
-4. **Confirm** — Modal asks confirmation with full step preview
-5. **Execute** — Backup → Auto-fix → Extensions → Composer → Setup → Compile → Deploy → Verify
-6. **Track** — Real-time animated progress with step-by-step timeline
+| Category | Example | Auto-Fixable |
+|----------|---------|:------------:|
+| Deprecated Classes | `Zend_Json` → `Magento\Framework\Serialize\Serializer\Json` | Yes |
+| Deprecated Methods | `getEntityId()` → `getId()` | Yes |
+| PHP Compatibility | `utf8_encode()` → `mb_convert_encoding()` | Yes |
+| Composer Constraints | `1.0.0` → `>=1.0.0` | Yes |
+| Class Overrides | Preferences on core classes | No |
+| Template Overrides | Custom .phtml overriding core | No |
 
 ---
 
@@ -100,6 +166,7 @@ app/code/MageUpgrade/AutoUpgrader/
 ├── Block/Adminhtml/        # Admin blocks
 ├── Console/Command/        # CLI commands (scan, upgrade, rollback)
 ├── Controller/Adminhtml/   # Admin controllers
+├── docs/                   # User guide & screenshots
 ├── Helper/                 # Configuration helper
 ├── Model/                  # Data models & resource models
 ├── Service/                # Core services (7 implementations)
@@ -110,6 +177,16 @@ app/code/MageUpgrade/AutoUpgrader/
 
 ---
 
+## Documentation
+
+See [User Guide](docs/USER_GUIDE.md) for detailed step-by-step instructions.
+
+---
+
 ## License
 
 Proprietary
+
+## Author
+
+Manali Patel — manali21p@gmail.com
