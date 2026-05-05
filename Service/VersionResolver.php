@@ -49,7 +49,10 @@ class VersionResolver implements VersionResolverInterface
             }
 
             // Sort newest first
-            usort($versions, fn(array $a, array $b) => version_compare($b['version'], $a['version']));
+            usort($versions, fn(array $a, array $b) => version_compare(
+                $this->normalizePatchVersion($b['version']),
+                $this->normalizePatchVersion($a['version'])
+            ));
         } catch (\Exception $e) {
             $this->logger->error('AutoUpgrader: Failed to fetch versions from Packagist', [
                 'error' => $e->getMessage()
@@ -88,25 +91,44 @@ class VersionResolver implements VersionResolverInterface
             return false;
         }
         // Must be newer than current
-        return version_compare($version, $currentVersion, '>');
+        // PHP's version_compare treats -p as pre-release (lower), so we
+        // normalize "2.4.8-p2" → "2.4.8.2" for correct comparison
+        return version_compare(
+            $this->normalizePatchVersion($version),
+            $this->normalizePatchVersion($currentVersion),
+            '>'
+        );
+    }
+
+    /**
+     * Convert Magento patch notation to dot notation for proper comparison.
+     * "2.4.8"    → "2.4.8.0"
+     * "2.4.8-p3" → "2.4.8.3"
+     */
+    private function normalizePatchVersion(string $version): string
+    {
+        if (preg_match('/^(.+)-p(\d+)$/', $version, $m)) {
+            return $m[1] . '.' . $m[2];
+        }
+        return $version . '.0';
     }
 
     private function getFallbackVersions(string $currentVersion): array
     {
         $knownVersions = [
-            '2.4.8-p4', '2.4.8-p3', '2.4.8-p2', '2.4.8-p1', '2.4.8',
+            '2.4.9', '2.4.8-p5', '2.4.8-p4', '2.4.8-p3', '2.4.8-p2', '2.4.8-p1', '2.4.8',
             '2.4.7-p4', '2.4.7-p3', '2.4.7-p2', '2.4.7-p1', '2.4.7',
         ];
 
         $versions = [];
         foreach ($knownVersions as $v) {
-            if (version_compare($v, $currentVersion, '>')) {
+            if ($this->isValidUpgradeTarget($v, $currentVersion)) {
                 $versions[] = [
                     'version' => $v,
                     'php_requirement' => 'Check release notes',
                     'release_date' => '',
                     'is_patch' => str_contains($v, '-p'),
-                    'is_security' => false,
+                    'is_security' => str_contains($v, '-p'),
                 ];
             }
         }
