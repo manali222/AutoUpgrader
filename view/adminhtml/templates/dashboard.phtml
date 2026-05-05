@@ -3,159 +3,214 @@
 $currentVersion = $block->getCurrentVersion();
 $availableVersions = $block->getAvailableVersions();
 $extensions = $block->getInstalledExtensions();
-$startUrl = $block->getStartUpgradeUrl();
-$confirmUrl = $block->getConfirmUpgradeUrl();
-$progressUrl = $block->getProgressUrl();
 ?>
 
-<div id="autoupgrader-dashboard" class="autoupgrader-container">
-    <!-- Header Section -->
+<div id="autoupgrader-wizard" class="autoupgrader-container">
+    <!-- Header -->
     <div class="autoupgrader-header">
         <div class="autoupgrader-header__info">
             <h1 class="autoupgrader-header__title">Magento AutoUpgrader</h1>
-            <p class="autoupgrader-header__subtitle">Automated version migration with compatibility analysis</p>
+            <p class="autoupgrader-header__subtitle">Automated upgrade wizard</p>
         </div>
         <div class="autoupgrader-header__version">
             <span class="version-badge">Current: <strong><?= $block->escapeHtml($currentVersion) ?></strong></span>
         </div>
     </div>
 
-    <!-- Status Cards -->
-    <div class="autoupgrader-cards">
-        <div class="autoupgrader-card autoupgrader-card--info">
-            <div class="autoupgrader-card__icon">&#9432;</div>
-            <div class="autoupgrader-card__content">
-                <div class="autoupgrader-card__number"><?= count($availableVersions) ?></div>
-                <div class="autoupgrader-card__label">Available Upgrades</div>
-            </div>
+    <!-- Wizard Steps Indicator -->
+    <div class="wizard-steps-bar">
+        <div class="wizard-step-indicator active" data-step="1">
+            <div class="wizard-step-num">1</div>
+            <div class="wizard-step-label">Select Version</div>
         </div>
-        <div class="autoupgrader-card autoupgrader-card--success">
-            <div class="autoupgrader-card__icon">&#10003;</div>
-            <div class="autoupgrader-card__content">
-                <div class="autoupgrader-card__number"><?= count($extensions) ?></div>
-                <div class="autoupgrader-card__label">Installed Extensions</div>
-            </div>
+        <div class="wizard-step-line"></div>
+        <div class="wizard-step-indicator" data-step="2">
+            <div class="wizard-step-num">2</div>
+            <div class="wizard-step-label">Scan</div>
         </div>
-        <div class="autoupgrader-card autoupgrader-card--warning">
-            <div class="autoupgrader-card__icon">&#9888;</div>
-            <div class="autoupgrader-card__content">
-                <div class="autoupgrader-card__number" id="issues-count">--</div>
-                <div class="autoupgrader-card__label">Issues (after scan)</div>
+        <div class="wizard-step-line"></div>
+        <div class="wizard-step-indicator" data-step="3">
+            <div class="wizard-step-num">3</div>
+            <div class="wizard-step-label">Review</div>
+        </div>
+        <div class="wizard-step-line"></div>
+        <div class="wizard-step-indicator" data-step="4">
+            <div class="wizard-step-num">4</div>
+            <div class="wizard-step-label">Confirm</div>
+        </div>
+        <div class="wizard-step-line"></div>
+        <div class="wizard-step-indicator" data-step="5">
+            <div class="wizard-step-num">5</div>
+            <div class="wizard-step-label">Upgrade</div>
+        </div>
+        <div class="wizard-step-line"></div>
+        <div class="wizard-step-indicator" data-step="6">
+            <div class="wizard-step-num">6</div>
+            <div class="wizard-step-label">Done</div>
+        </div>
+    </div>
+
+    <!-- ======================== STEP 1: Select Version ======================== -->
+    <div class="wizard-panel" id="wizard-step-1">
+        <div class="autoupgrader-panel">
+            <div class="autoupgrader-panel__header"><h2>Step 1: Select Target Version</h2></div>
+            <div class="autoupgrader-panel__body">
+                <p>Choose the Magento version you want to upgrade to. Patches include security fixes.</p>
+                <div class="autoupgrader-form-row">
+                    <label for="target-version" class="autoupgrader-label">Target Version</label>
+                    <select id="target-version" class="autoupgrader-select">
+                        <option value="">-- Select Version --</option>
+                        <?php foreach ($availableVersions as $v): ?>
+                            <option value="<?= $block->escapeHtmlAttr($v['version']) ?>"
+                                    data-php="<?= $block->escapeHtmlAttr($v['php_requirement']) ?>">
+                                <?= $block->escapeHtml($v['version']) ?>
+                                <?= $v['is_patch'] ? ' (Security Patch)' : '' ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div id="version-info" class="version-info-box" style="display:none;">
+                    <div><strong>Upgrade Path:</strong> <?= $block->escapeHtml($currentVersion) ?> &rarr; <span id="version-target"></span></div>
+                    <div><strong>PHP Requirement:</strong> <span id="version-php"></span></div>
+                </div>
+                <div class="wizard-nav">
+                    <span></span>
+                    <button id="btn-step1-next" class="autoupgrader-btn autoupgrader-btn--primary" type="button" disabled>
+                        Next: Run Compatibility Scan &rarr;
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Upgrade Panel -->
-    <div class="autoupgrader-panel">
-        <div class="autoupgrader-panel__header">
-            <h2>Start Upgrade</h2>
-        </div>
-        <div class="autoupgrader-panel__body">
-            <div class="autoupgrader-form-row">
-                <label for="target-version" class="autoupgrader-label">Select Target Version</label>
-                <select id="target-version" class="autoupgrader-select">
-                    <option value="">-- Select Version --</option>
-                    <?php foreach ($availableVersions as $v): ?>
-                        <option value="<?= $block->escapeHtmlAttr($v['version']) ?>">
-                            <?= $block->escapeHtml($v['version']) ?>
-                            <?= $v['is_patch'] ? ' (Security Patch)' : '' ?>
-                            <?= !empty($v['release_date']) ? ' - ' . $block->escapeHtml(substr($v['release_date'], 0, 10)) : '' ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+    <!-- ======================== STEP 2: Scanning ======================== -->
+    <div class="wizard-panel" id="wizard-step-2" style="display:none;">
+        <div class="autoupgrader-panel">
+            <div class="autoupgrader-panel__header">
+                <h2>Step 2: Compatibility Scan</h2>
+                <span id="scan-badge" class="status-badge status-badge--running">Scanning...</span>
             </div>
-
-            <div class="autoupgrader-form-row">
-                <label class="autoupgrader-checkbox-label">
-                    <input type="checkbox" id="include-patches" checked> Include available patches
-                </label>
-            </div>
-
-            <div class="autoupgrader-actions">
-                <button id="btn-start-upgrade" class="autoupgrader-btn autoupgrader-btn--primary" type="button">
-                    Scan &amp; Prepare Upgrade
-                </button>
+            <div class="autoupgrader-panel__body">
+                <div class="scan-progress-area">
+                    <div class="scan-spinner"></div>
+                    <p id="scan-status-text">Scanning your codebase for compatibility issues...</p>
+                </div>
+                <div id="scan-log" class="scan-log"></div>
             </div>
         </div>
     </div>
 
-    <!-- Scan Results Panel (hidden until scan runs) -->
-    <div id="scan-results-panel" class="autoupgrader-panel" style="display:none;">
-        <div class="autoupgrader-panel__header">
-            <h2>Compatibility Scan Results</h2>
-            <span id="scan-status-badge" class="status-badge status-badge--running">Scanning...</span>
-        </div>
-        <div class="autoupgrader-panel__body">
-            <div class="scan-summary" id="scan-summary"></div>
-            <div class="scan-issues-list" id="scan-issues-list"></div>
-            <div class="scan-extensions-list" id="scan-extensions-list"></div>
+    <!-- ======================== STEP 3: Review Results ======================== -->
+    <div class="wizard-panel" id="wizard-step-3" style="display:none;">
+        <div class="autoupgrader-panel">
+            <div class="autoupgrader-panel__header"><h2>Step 3: Review Scan Results</h2></div>
+            <div class="autoupgrader-panel__body">
+                <!-- Summary cards -->
+                <div class="autoupgrader-cards" id="review-stats"></div>
+
+                <!-- Impacted files -->
+                <div class="scan-section">
+                    <h3>Impacted Files</h3>
+                    <div id="review-files" class="file-list"></div>
+                </div>
+
+                <!-- Issues table -->
+                <div class="scan-section">
+                    <h3>Issues Found</h3>
+                    <div id="review-issues"></div>
+                </div>
+
+                <!-- Extensions -->
+                <div class="scan-section">
+                    <h3>Extension Compatibility</h3>
+                    <table class="autoupgrader-table">
+                        <thead>
+                            <tr><th>Extension</th><th>Current</th><th>Compatible</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="review-extensions"></tbody>
+                    </table>
+                </div>
+
+                <div class="wizard-nav">
+                    <button id="btn-step3-back" class="autoupgrader-btn autoupgrader-btn--secondary" type="button">&larr; Back</button>
+                    <button id="btn-step3-next" class="autoupgrader-btn autoupgrader-btn--primary" type="button">
+                        Next: Confirm Upgrade &rarr;
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Confirmation Modal -->
-    <div id="confirm-modal" class="autoupgrader-modal" style="display:none;">
-        <div class="autoupgrader-modal__overlay"></div>
-        <div class="autoupgrader-modal__content">
-            <div class="autoupgrader-modal__header">
-                <h3>Confirm Upgrade</h3>
-            </div>
-            <div class="autoupgrader-modal__body">
-                <p class="autoupgrader-modal__warning">
-                    &#9888; <strong>Warning:</strong> This will upgrade your Magento installation.
-                    A backup will be created before any changes are made.
-                </p>
-                <div id="confirm-summary"></div>
-                <p>The following steps will be executed:</p>
-                <ol class="autoupgrader-steps-preview">
-                    <li>Create full backup (database + files)</li>
-                    <li>Auto-fix compatible issues</li>
-                    <li>Upgrade third-party extensions</li>
-                    <li>Run Composer update to target version</li>
-                    <li>Execute setup:upgrade</li>
-                    <li>Compile DI</li>
-                    <li>Deploy static content</li>
-                    <li>Flush cache</li>
-                    <li>Verify installation</li>
+    <!-- ======================== STEP 4: Confirm ======================== -->
+    <div class="wizard-panel" id="wizard-step-4" style="display:none;">
+        <div class="autoupgrader-panel">
+            <div class="autoupgrader-panel__header"><h2>Step 4: Confirm &amp; Start Upgrade</h2></div>
+            <div class="autoupgrader-panel__body">
+                <div class="confirm-warning">
+                    <strong>&#9888; You are about to upgrade your Magento installation.</strong><br>
+                    This process will automatically perform all steps below. A full backup is created first.
+                </div>
+
+                <div class="confirm-summary" id="confirm-summary"></div>
+
+                <h3>The wizard will automatically:</h3>
+                <ol class="confirm-steps-list">
+                    <li>Create full backup (database + code + config)</li>
+                    <li>Auto-fix all detected compatibility issues</li>
+                    <li>Upgrade third-party extensions to compatible versions</li>
+                    <li>Run <code>composer require</code> for the new Magento version</li>
+                    <li>Run <code>composer update</code></li>
+                    <li>Execute <code>bin/magento setup:upgrade</code></li>
+                    <li>Execute <code>bin/magento setup:di:compile</code></li>
+                    <li>Execute <code>bin/magento setup:static-content:deploy</code></li>
+                    <li>Flush all caches</li>
+                    <li>Verify the installation</li>
                 </ol>
-            </div>
-            <div class="autoupgrader-modal__footer">
-                <button id="btn-cancel-upgrade" class="autoupgrader-btn autoupgrader-btn--secondary" type="button">Cancel</button>
-                <button id="btn-confirm-upgrade" class="autoupgrader-btn autoupgrader-btn--danger" type="button">Confirm &amp; Execute Upgrade</button>
+
+                <div class="wizard-nav">
+                    <button id="btn-step4-back" class="autoupgrader-btn autoupgrader-btn--secondary" type="button">&larr; Back</button>
+                    <button id="btn-step4-start" class="autoupgrader-btn autoupgrader-btn--danger autoupgrader-btn--large" type="button">
+                        &#9654; Start Automated Upgrade Now
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Progress Panel -->
-    <div id="progress-panel" class="autoupgrader-panel" style="display:none;">
-        <div class="autoupgrader-panel__header">
-            <h2>Upgrade Progress</h2>
-            <span id="progress-status" class="status-badge status-badge--running">In Progress</span>
+    <!-- ======================== STEP 5: Live Progress ======================== -->
+    <div class="wizard-panel" id="wizard-step-5" style="display:none;">
+        <div class="autoupgrader-panel">
+            <div class="autoupgrader-panel__header">
+                <h2>Step 5: Upgrading...</h2>
+                <span id="upgrade-badge" class="status-badge status-badge--running">In Progress</span>
+            </div>
+            <div class="autoupgrader-panel__body">
+                <!-- Main progress bar -->
+                <div class="autoupgrader-progress">
+                    <div class="autoupgrader-progress__bar">
+                        <div class="autoupgrader-progress__fill" id="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="autoupgrader-progress__text">
+                        <span id="progress-percent">0%</span>
+                        <span id="progress-step">Starting...</span>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="autoupgrader-timeline" id="progress-timeline"></div>
+
+                <!-- Error -->
+                <div id="progress-error" class="autoupgrader-error" style="display:none;"></div>
+            </div>
         </div>
-        <div class="autoupgrader-panel__body">
-            <!-- Progress Bar -->
-            <div class="autoupgrader-progress">
-                <div class="autoupgrader-progress__bar">
-                    <div class="autoupgrader-progress__fill" id="progress-fill" style="width: 0%"></div>
-                </div>
-                <div class="autoupgrader-progress__text">
-                    <span id="progress-percent">0%</span>
-                    <span id="progress-step">Initializing...</span>
-                </div>
-            </div>
+    </div>
 
-            <!-- Step-by-step timeline -->
-            <div class="autoupgrader-timeline" id="progress-timeline">
-                <!-- Steps will be rendered dynamically -->
-            </div>
-
-            <!-- Error display -->
-            <div id="progress-error" class="autoupgrader-error" style="display:none;"></div>
-
-            <!-- Rollback button -->
-            <div class="autoupgrader-actions" id="rollback-actions" style="display:none;">
-                <button id="btn-rollback" class="autoupgrader-btn autoupgrader-btn--warning" type="button">
-                    Rollback to Previous Version
-                </button>
+    <!-- ======================== STEP 6: Complete ======================== -->
+    <div class="wizard-panel" id="wizard-step-6" style="display:none;">
+        <div class="autoupgrader-panel">
+            <div class="autoupgrader-panel__header"><h2>Upgrade Complete</h2></div>
+            <div class="autoupgrader-panel__body" id="completion-body">
+                <!-- Filled dynamically -->
             </div>
         </div>
     </div>
@@ -163,12 +218,14 @@ $progressUrl = $block->getProgressUrl();
 
 <script type="text/x-magento-init">
 {
-    "#autoupgrader-dashboard": {
-        "MageUpgrade_AutoUpgrader/js/dashboard": {
-            "startUrl": "<?= $block->escapeUrl($startUrl) ?>",
-            "confirmUrl": "<?= $block->escapeUrl($confirmUrl) ?>",
-            "progressUrl": "<?= $block->escapeUrl($progressUrl) ?>",
-            "formKey": "<?= $block->escapeUrl($block->getFormKey()) ?>"
+    "#autoupgrader-wizard": {
+        "MageUpgrade_AutoUpgrader/js/wizard": {
+            "scanUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/scan/run')) ?>",
+            "executeUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/upgrade/execute')) ?>",
+            "progressUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/upgrade/progress')) ?>",
+            "rollbackUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/upgrade/rollback')) ?>",
+            "formKey": "<?= $block->escapeUrl($block->getFormKey()) ?>",
+            "currentVersion": "<?= $block->escapeHtml($currentVersion) ?>"
         }
     }
 }

@@ -535,6 +535,231 @@
     color: var(--au-text);
 }
 
+/* ==================== Wizard ==================== */
+
+.wizard-steps-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 32px;
+    padding: 20px;
+    background: var(--au-card-bg);
+    border-radius: var(--au-radius);
+    box-shadow: var(--au-shadow);
+}
+
+.wizard-step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 80px;
+}
+
+.wizard-step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--au-border);
+    color: var(--au-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.wizard-step-indicator.active .wizard-step-num {
+    background: var(--au-primary);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.2);
+}
+
+.wizard-step-indicator.completed .wizard-step-num {
+    background: var(--au-success);
+    color: #fff;
+}
+
+.wizard-step-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--au-text-muted);
+    text-align: center;
+}
+
+.wizard-step-indicator.active .wizard-step-label {
+    color: var(--au-primary);
+    font-weight: 700;
+}
+
+.wizard-step-indicator.completed .wizard-step-label {
+    color: var(--au-success);
+}
+
+.wizard-step-line {
+    flex: 1;
+    height: 2px;
+    background: var(--au-border);
+    margin: 0 4px;
+    margin-bottom: 20px;
+}
+
+.wizard-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--au-border);
+}
+
+/* Version info box */
+.version-info-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+/* Scan progress */
+.scan-progress-area {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 0;
+}
+
+.scan-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--au-border);
+    border-top-color: var(--au-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.scan-log {
+    background: #0f172a;
+    color: #94a3b8;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: "SF Mono", "Consolas", monospace;
+    font-size: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 16px;
+}
+
+.scan-log-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid #1e293b;
+}
+
+/* Confirm */
+.confirm-warning {
+    background: #fef3c7;
+    border: 1px solid #fbbf24;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.confirm-summary {
+    background: var(--au-bg);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.confirm-detail {
+    padding: 4px 0;
+    font-size: 14px;
+}
+
+.confirm-steps-list {
+    font-size: 13px;
+    color: var(--au-text);
+    line-height: 2;
+    padding-left: 20px;
+}
+
+.confirm-steps-list code {
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.autoupgrader-btn--large {
+    padding: 16px 32px;
+    font-size: 16px;
+}
+
+/* Review */
+.no-issues {
+    color: var(--au-success);
+    font-weight: 500;
+    padding: 12px 0;
+}
+
+.mono {
+    font-family: "SF Mono", "Consolas", monospace;
+    font-size: 11px;
+}
+
+.fix-yes {
+    background: #dcfce7;
+    color: var(--au-success);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Completion */
+.completion-success, .completion-failed {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.completion-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #dcfce7;
+    color: var(--au-success);
+    font-size: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.completion-icon--failed {
+    background: #fef2f2;
+    color: var(--au-danger);
+}
+
+.completion-details {
+    background: var(--au-bg);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 20px auto;
+    max-width: 500px;
+    text-align: left;
+    font-size: 13px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .autoupgrader-header {
