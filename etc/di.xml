@@ -24,6 +24,15 @@
     <preference for="MageUpgrade\AutoUpgrader\Api\Data\ScanResultInterface"
                 type="MageUpgrade\AutoUpgrader\Model\ScanResult"/>
 
+    <!-- UI Component Data Provider for Upgrade History Grid -->
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="autoupgrader_upgrade_history_listing_data_source" xsi:type="string">MageUpgrade\AutoUpgrader\Model\ResourceModel\UpgradeLog\Collection</item>
+            </argument>
+        </arguments>
+    </type>
+
     <!-- CLI Commands -->
     <type name="Magento\Framework\Console\CommandListInterface">
         <arguments>
