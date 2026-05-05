@@ -1,0 +1,104 @@
+<?php
+/** @var \MageUpgrade\AutoUpgrader\Block\Adminhtml\Scan $block */
+$currentVersion = $block->getCurrentVersion();
+$availableVersions = $block->getAvailableVersions();
+$scanUrl = $block->getRunScanUrl();
+?>
+
+<div id="autoupgrader-scan" class="autoupgrader-container">
+    <div class="autoupgrader-header">
+        <div class="autoupgrader-header__info">
+            <h1 class="autoupgrader-header__title">Compatibility Scanner</h1>
+            <p class="autoupgrader-header__subtitle">Analyze your installation for upgrade compatibility issues</p>
+        </div>
+        <div class="autoupgrader-header__version">
+            <span class="version-badge">Current: <strong><?= $block->escapeHtml($currentVersion) ?></strong></span>
+        </div>
+    </div>
+
+    <div class="autoupgrader-panel">
+        <div class="autoupgrader-panel__header">
+            <h2>Run Compatibility Scan</h2>
+        </div>
+        <div class="autoupgrader-panel__body">
+            <p>Select a target version to scan your code, extensions, and templates for compatibility issues.</p>
+
+            <div class="autoupgrader-form-row">
+                <label for="scan-target-version" class="autoupgrader-label">Target Version</label>
+                <select id="scan-target-version" class="autoupgrader-select">
+                    <option value="">-- Select Version --</option>
+                    <?php foreach ($availableVersions as $v): ?>
+                        <option value="<?= $block->escapeHtmlAttr($v['version']) ?>">
+                            <?= $block->escapeHtml($v['version']) ?>
+                            <?= $v['is_patch'] ? ' (Patch)' : '' ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="autoupgrader-actions">
+                <button id="btn-run-scan" class="autoupgrader-btn autoupgrader-btn--primary" type="button">
+                    Run Full Scan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan Results -->
+    <div id="scan-detail-results" class="autoupgrader-panel" style="display:none;">
+        <div class="autoupgrader-panel__header">
+            <h2>Scan Results</h2>
+        </div>
+        <div class="autoupgrader-panel__body">
+            <!-- Stats -->
+            <div class="autoupgrader-cards" id="scan-stats"></div>
+
+            <!-- Impacted files -->
+            <div class="scan-section">
+                <h3>Impacted Files</h3>
+                <div id="impacted-files-list" class="file-list"></div>
+            </div>
+
+            <!-- Issues by category -->
+            <div class="scan-section">
+                <h3>Issues by Category</h3>
+                <div id="issues-by-category"></div>
+            </div>
+
+            <!-- Extension compatibility -->
+            <div class="scan-section">
+                <h3>Extension Compatibility</h3>
+                <table class="autoupgrader-table" id="extension-compat-table">
+                    <thead>
+                        <tr>
+                            <th>Extension</th>
+                            <th>Current Version</th>
+                            <th>Compatible Version</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="extension-compat-body"></tbody>
+                </table>
+            </div>
+
+            <!-- Auto-fix actions -->
+            <div class="autoupgrader-actions">
+                <button id="btn-auto-fix" class="autoupgrader-btn autoupgrader-btn--success" type="button" style="display:none;">
+                    Auto-Fix All Fixable Issues
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/x-magento-init">
+{
+    "#autoupgrader-scan": {
+        "MageUpgrade_AutoUpgrader/js/scan": {
+            "scanUrl": "<?= $block->escapeUrl($scanUrl) ?>",
+            "formKey": "<?= $block->escapeUrl($block->getFormKey()) ?>"
+        }
+    }
+}
+</script>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">autoupgrader_upgrade_history_listing.autoupgrader_upgrade_history_listing_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <spinner>autoupgrader_upgrade_history_columns</spinner>
+        <deps>
+            <dep>autoupgrader_upgrade_history_listing.autoupgrader_upgrade_history_listing_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="autoupgrader_upgrade_history_listing_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <updateUrl path="mui/index/render"/>
+        </settings>
+        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider"
+                      name="autoupgrader_upgrade_history_listing_data_source">
+            <settings>
+                <requestFieldName>upgrade_id</requestFieldName>
+                <primaryFieldName>upgrade_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <listingToolbar name="listing_top">
+        <paging name="listing_paging"/>
+    </listingToolbar>
+    <columns name="autoupgrader_upgrade_history_columns">
+        <selectionsColumn name="ids" sortOrder="10">
+            <settings>
+                <indexField>upgrade_id</indexField>
+            </settings>
+        </selectionsColumn>
+        <column name="upgrade_id" sortOrder="20">
+            <settings>
+                <label translate="true">ID</label>
+                <filter>textRange</filter>
+                <sorting>desc</sorting>
+            </settings>
+        </column>
+        <column name="from_version" sortOrder="30">
+            <settings>
+                <label translate="true">From Version</label>
+                <filter>text</filter>
+            </settings>
+        </column>
+        <column name="to_version" sortOrder="40">
+            <settings>
+                <label translate="true">To Version</label>
+                <filter>text</filter>
+            </settings>
+        </column>
+        <column name="status" sortOrder="50">
+            <settings>
+                <label translate="true">Status</label>
+                <filter>select</filter>
+                <bodyTmpl>ui/grid/cells/html</bodyTmpl>
+            </settings>
+        </column>
+        <column name="progress_percent" sortOrder="60">
+            <settings>
+                <label translate="true">Progress</label>
+            </settings>
+        </column>
+        <column name="initiated_by" sortOrder="70">
+            <settings>
+                <label translate="true">Initiated By</label>
+                <filter>text</filter>
+            </settings>
+        </column>
+        <column name="started_at" class="Magento\Ui\Component\Listing\Columns\Date" sortOrder="80">
+            <settings>
+                <label translate="true">Started</label>
+                <filter>dateRange</filter>
+            </settings>
+        </column>
+        <column name="completed_at" class="Magento\Ui\Component\Listing\Columns\Date" sortOrder="90">
+            <settings>
+                <label translate="true">Completed</label>
+                <filter>dateRange</filter>
+            </settings>
+        </column>
+    </columns>
+</listing>

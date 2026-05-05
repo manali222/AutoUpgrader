@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Service Contract Bindings -->
+    <preference for="MageUpgrade\AutoUpgrader\Api\UpgradeManagerInterface"
+                type="MageUpgrade\AutoUpgrader\Service\UpgradeManager"/>
+    <preference for="MageUpgrade\AutoUpgrader\Api\CompatibilityScannerInterface"
+                type="MageUpgrade\AutoUpgrader\Service\CompatibilityScanner"/>
+    <preference for="MageUpgrade\AutoUpgrader\Api\VersionResolverInterface"
+                type="MageUpgrade\AutoUpgrader\Service\VersionResolver"/>
+    <preference for="MageUpgrade\AutoUpgrader\Api\AutoFixerInterface"
+                type="MageUpgrade\AutoUpgrader\Service\AutoFixer"/>
+    <preference for="MageUpgrade\AutoUpgrader\Api\ProgressTrackerInterface"
+                type="MageUpgrade\AutoUpgrader\Service\ProgressTracker"/>
+    <preference for="MageUpgrade\AutoUpgrader\Api\ExtensionManagerInterface"
+                type="MageUpgrade\AutoUpgrader\Service\ExtensionManager"/>
+    <preference for="MageUpgrade\AutoUpgrader\Api\BackupManagerInterface"
+                type="MageUpgrade\AutoUpgrader\Service\BackupManager"/>
+
+    <!-- Data Interface Bindings -->
+    <preference for="MageUpgrade\AutoUpgrader\Api\Data\UpgradeLogInterface"
+                type="MageUpgrade\AutoUpgrader\Model\UpgradeLog"/>
+    <preference for="MageUpgrade\AutoUpgrader\Api\Data\ScanResultInterface"
+                type="MageUpgrade\AutoUpgrader\Model\ScanResult"/>
+
+    <!-- CLI Commands -->
+    <type name="Magento\Framework\Console\CommandListInterface">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="mageupgrade_scan" xsi:type="object">MageUpgrade\AutoUpgrader\Console\Command\ScanCommand</item>
+                <item name="mageupgrade_upgrade" xsi:type="object">MageUpgrade\AutoUpgrader\Console\Command\UpgradeCommand</item>
+                <item name="mageupgrade_rollback" xsi:type="object">MageUpgrade\AutoUpgrader\Console\Command\RollbackCommand</item>
+            </argument>
+        </arguments>
+    </type>
+
+</config>

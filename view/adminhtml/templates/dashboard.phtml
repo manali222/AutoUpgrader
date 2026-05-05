@@ -1,0 +1,175 @@
+<?php
+/** @var \MageUpgrade\AutoUpgrader\Block\Adminhtml\Dashboard $block */
+$currentVersion = $block->getCurrentVersion();
+$availableVersions = $block->getAvailableVersions();
+$extensions = $block->getInstalledExtensions();
+$startUrl = $block->getStartUpgradeUrl();
+$confirmUrl = $block->getConfirmUpgradeUrl();
+$progressUrl = $block->getProgressUrl();
+?>
+
+<div id="autoupgrader-dashboard" class="autoupgrader-container">
+    <!-- Header Section -->
+    <div class="autoupgrader-header">
+        <div class="autoupgrader-header__info">
+            <h1 class="autoupgrader-header__title">Magento AutoUpgrader</h1>
+            <p class="autoupgrader-header__subtitle">Automated version migration with compatibility analysis</p>
+        </div>
+        <div class="autoupgrader-header__version">
+            <span class="version-badge">Current: <strong><?= $block->escapeHtml($currentVersion) ?></strong></span>
+        </div>
+    </div>
+
+    <!-- Status Cards -->
+    <div class="autoupgrader-cards">
+        <div class="autoupgrader-card autoupgrader-card--info">
+            <div class="autoupgrader-card__icon">&#9432;</div>
+            <div class="autoupgrader-card__content">
+                <div class="autoupgrader-card__number"><?= count($availableVersions) ?></div>
+                <div class="autoupgrader-card__label">Available Upgrades</div>
+            </div>
+        </div>
+        <div class="autoupgrader-card autoupgrader-card--success">
+            <div class="autoupgrader-card__icon">&#10003;</div>
+            <div class="autoupgrader-card__content">
+                <div class="autoupgrader-card__number"><?= count($extensions) ?></div>
+                <div class="autoupgrader-card__label">Installed Extensions</div>
+            </div>
+        </div>
+        <div class="autoupgrader-card autoupgrader-card--warning">
+            <div class="autoupgrader-card__icon">&#9888;</div>
+            <div class="autoupgrader-card__content">
+                <div class="autoupgrader-card__number" id="issues-count">--</div>
+                <div class="autoupgrader-card__label">Issues (after scan)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upgrade Panel -->
+    <div class="autoupgrader-panel">
+        <div class="autoupgrader-panel__header">
+            <h2>Start Upgrade</h2>
+        </div>
+        <div class="autoupgrader-panel__body">
+            <div class="autoupgrader-form-row">
+                <label for="target-version" class="autoupgrader-label">Select Target Version</label>
+                <select id="target-version" class="autoupgrader-select">
+                    <option value="">-- Select Version --</option>
+                    <?php foreach ($availableVersions as $v): ?>
+                        <option value="<?= $block->escapeHtmlAttr($v['version']) ?>">
+                            <?= $block->escapeHtml($v['version']) ?>
+                            <?= $v['is_patch'] ? ' (Security Patch)' : '' ?>
+                            <?= !empty($v['release_date']) ? ' - ' . $block->escapeHtml(substr($v['release_date'], 0, 10)) : '' ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="autoupgrader-form-row">
+                <label class="autoupgrader-checkbox-label">
+                    <input type="checkbox" id="include-patches" checked> Include available patches
+                </label>
+            </div>
+
+            <div class="autoupgrader-actions">
+                <button id="btn-start-upgrade" class="autoupgrader-btn autoupgrader-btn--primary" type="button">
+                    Scan &amp; Prepare Upgrade
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan Results Panel (hidden until scan runs) -->
+    <div id="scan-results-panel" class="autoupgrader-panel" style="display:none;">
+        <div class="autoupgrader-panel__header">
+            <h2>Compatibility Scan Results</h2>
+            <span id="scan-status-badge" class="status-badge status-badge--running">Scanning...</span>
+        </div>
+        <div class="autoupgrader-panel__body">
+            <div class="scan-summary" id="scan-summary"></div>
+            <div class="scan-issues-list" id="scan-issues-list"></div>
+            <div class="scan-extensions-list" id="scan-extensions-list"></div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="autoupgrader-modal" style="display:none;">
+        <div class="autoupgrader-modal__overlay"></div>
+        <div class="autoupgrader-modal__content">
+            <div class="autoupgrader-modal__header">
+                <h3>Confirm Upgrade</h3>
+            </div>
+            <div class="autoupgrader-modal__body">
+                <p class="autoupgrader-modal__warning">
+                    &#9888; <strong>Warning:</strong> This will upgrade your Magento installation.
+                    A backup will be created before any changes are made.
+                </p>
+                <div id="confirm-summary"></div>
+                <p>The following steps will be executed:</p>
+                <ol class="autoupgrader-steps-preview">
+                    <li>Create full backup (database + files)</li>
+                    <li>Auto-fix compatible issues</li>
+                    <li>Upgrade third-party extensions</li>
+                    <li>Run Composer update to target version</li>
+                    <li>Execute setup:upgrade</li>
+                    <li>Compile DI</li>
+                    <li>Deploy static content</li>
+                    <li>Flush cache</li>
+                    <li>Verify installation</li>
+                </ol>
+            </div>
+            <div class="autoupgrader-modal__footer">
+                <button id="btn-cancel-upgrade" class="autoupgrader-btn autoupgrader-btn--secondary" type="button">Cancel</button>
+                <button id="btn-confirm-upgrade" class="autoupgrader-btn autoupgrader-btn--danger" type="button">Confirm &amp; Execute Upgrade</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Panel -->
+    <div id="progress-panel" class="autoupgrader-panel" style="display:none;">
+        <div class="autoupgrader-panel__header">
+            <h2>Upgrade Progress</h2>
+            <span id="progress-status" class="status-badge status-badge--running">In Progress</span>
+        </div>
+        <div class="autoupgrader-panel__body">
+            <!-- Progress Bar -->
+            <div class="autoupgrader-progress">
+                <div class="autoupgrader-progress__bar">
+                    <div class="autoupgrader-progress__fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="autoupgrader-progress__text">
+                    <span id="progress-percent">0%</span>
+                    <span id="progress-step">Initializing...</span>
+                </div>
+            </div>
+
+            <!-- Step-by-step timeline -->
+            <div class="autoupgrader-timeline" id="progress-timeline">
+                <!-- Steps will be rendered dynamically -->
+            </div>
+
+            <!-- Error display -->
+            <div id="progress-error" class="autoupgrader-error" style="display:none;"></div>
+
+            <!-- Rollback button -->
+            <div class="autoupgrader-actions" id="rollback-actions" style="display:none;">
+                <button id="btn-rollback" class="autoupgrader-btn autoupgrader-btn--warning" type="button">
+                    Rollback to Previous Version
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/x-magento-init">
+{
+    "#autoupgrader-dashboard": {
+        "MageUpgrade_AutoUpgrader/js/dashboard": {
+            "startUrl": "<?= $block->escapeUrl($startUrl) ?>",
+            "confirmUrl": "<?= $block->escapeUrl($confirmUrl) ?>",
+            "progressUrl": "<?= $block->escapeUrl($progressUrl) ?>",
+            "formKey": "<?= $block->escapeUrl($block->getFormKey()) ?>"
+        }
+    }
+}
+</script>
