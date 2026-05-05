@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Webapi:etc/webapi.xsd">
+
+    <!-- Version endpoints -->
+    <route url="/V1/autoupgrader/versions" method="GET">
+        <service class="MageUpgrade\AutoUpgrader\Api\VersionResolverInterface" method="getAvailableVersions"/>
+        <resources>
+            <resource ref="MageUpgrade_AutoUpgrader::dashboard"/>
+        </resources>
+    </route>
+
+    <!-- Compatibility scan endpoints -->
+    <route url="/V1/autoupgrader/scan" method="POST">
+        <service class="MageUpgrade\AutoUpgrader\Api\CompatibilityScannerInterface" method="runScan"/>
+        <resources>
+            <resource ref="MageUpgrade_AutoUpgrader::scan"/>
+        </resources>
+    </route>
+    <route url="/V1/autoupgrader/scan/results/:scanId" method="GET">
+        <service class="MageUpgrade\AutoUpgrader\Api\CompatibilityScannerInterface" method="getScanResults"/>
+        <resources>
+            <resource ref="MageUpgrade_AutoUpgrader::scan"/>
+        </resources>
+    </route>
+
+    <!-- Auto-fix endpoints -->
+    <route url="/V1/autoupgrader/fix" method="POST">
+        <service class="MageUpgrade\AutoUpgrader\Api\AutoFixerInterface" method="applyFixes"/>
+        <resources>
+            <resource ref="MageUpgrade_AutoUpgrader::upgrade"/>
+        </resources>
+    </route>
+
+    <!-- Extension manager endpoints -->
+    <route url="/V1/autoupgrader/extensions" method="GET">
+        <service class="MageUpgrade\AutoUpgrader\Api\ExtensionManagerInterface" method="getInstalledExtensions"/>
+        <resources>
+            <resource ref="MageUpgrade_AutoUpgrader::dashboard"/>
+        </resources>
+    </route>
+    <route url="/V1/autoupgrader/extensions/compatible" method="POST">
+        <service class="MageUpgrade\AutoUpgrader\Api\ExtensionManagerInterface" method="findCompatibleVersions"/>
+        <resources>
+            <resource ref="MageUpgrade_AutoUpgrader::scan"/>
+        </resources>
+    </route>
+
+    <!-- Upgrade execution endpoints -->
+    <route url="/V1/autoupgrader/upgrade/start" method="POST">
+        <service class="MageUpgrade\AutoUpgrader\Api\UpgradeManagerInterface" method="startUpgrade"/>
+        <resources>
+            <resource ref="MageUpgrade_AutoUpgrader::upgrade"/>
+        </resources>
+    </route>
+    <route url="/V1/autoupgrader/upgrade/confirm" method="POST">
+        <service class="MageUpgrade\AutoUpgrader\Api\UpgradeManagerInterface" method="confirmAndExecute"/>
+        <resources>
+            <resource ref="MageUpgrade_AutoUpgrader::upgrade"/>
+        </resources>
+    </route>
+    <route url="/V1/autoupgrader/upgrade/rollback/:upgradeId" method="POST">
+        <service class="MageUpgrade\AutoUpgrader\Api\UpgradeManagerInterface" method="rollback"/>
+        <resources>
+            <resource ref="MageUpgrade_AutoUpgrader::upgrade"/>
+        </resources>
+    </route>
+
+    <!-- Progress tracking -->
+    <route url="/V1/autoupgrader/progress/:upgradeId" method="GET">
+        <service class="MageUpgrade\AutoUpgrader\Api\ProgressTrackerInterface" method="getProgress"/>
+        <resources>
+            <resource ref="MageUpgrade_AutoUpgrader::dashboard"/>
+        </resources>
+    </route>
+
+    <!-- Backup endpoints -->
+    <route url="/V1/autoupgrader/backup/create" method="POST">
+        <service class="MageUpgrade\AutoUpgrader\Api\BackupManagerInterface" method="createBackup"/>
+        <resources>
+            <resource ref="MageUpgrade_AutoUpgrader::upgrade"/>
+        </resources>
+    </route>
+
+</routes>
