@@ -108,6 +108,25 @@ $extensions = $block->getInstalledExtensions();
                 <!-- Summary cards -->
                 <div class="autoupgrader-cards" id="review-stats"></div>
 
+                <!-- Auto-fix area -->
+                <div id="review-autofix-area" class="autofix-area" style="display:none;">
+                    <div class="autofix-box">
+                        <div class="autofix-info">
+                            <strong><span id="autofix-count">0</span> issues can be automatically fixed</strong>
+                            <p>Click the button to apply all auto-fixes to your codebase. A backup is created before changes.</p>
+                        </div>
+                        <button id="btn-autofix" class="autoupgrader-btn autoupgrader-btn--primary" type="button">
+                            Apply All Auto-Fixes
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Readiness check -->
+                <div class="scan-section">
+                    <h3>Upgrade Readiness</h3>
+                    <div id="review-readiness" class="readiness-panel"></div>
+                </div>
+
                 <!-- Impacted files -->
                 <div class="scan-section">
                     <h3>Impacted Files</h3>
@@ -221,6 +240,7 @@ $extensions = $block->getInstalledExtensions();
     "#autoupgrader-wizard": {
         "MageUpgrade_AutoUpgrader/js/wizard": {
             "scanUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/scan/run')) ?>",
+            "fixUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/scan/fix')) ?>",
             "executeUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/upgrade/execute')) ?>",
             "progressUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/upgrade/progress')) ?>",
             "rollbackUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/upgrade/rollback')) ?>",

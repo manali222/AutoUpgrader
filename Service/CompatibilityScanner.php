@@ -34,9 +34,9 @@ class CompatibilityScanner implements CompatibilityScannerInterface
 
     private const DEPRECATED_METHODS = [
         '2.4.8' => [
-            'getEntityId' => ['replacement' => 'getId', 'context' => 'AbstractModel'],
-            'setEntityId' => ['replacement' => 'setId', 'context' => 'AbstractModel'],
-            'getResource' => ['replacement' => 'Use ResourceModel via DI', 'context' => 'AbstractModel'],
+            'getEntityId' => ['replacement' => 'getId', 'context' => 'AbstractModel', 'auto_fixable' => true],
+            'setEntityId' => ['replacement' => 'setId', 'context' => 'AbstractModel', 'auto_fixable' => true],
+            'getResource' => ['replacement' => 'Use ResourceModel via DI', 'context' => 'AbstractModel', 'auto_fixable' => false],
         ],
     ];
 
@@ -208,6 +208,7 @@ class CompatibilityScanner implements CompatibilityScannerInterface
             foreach ($methods as $method => $info) {
                 if (preg_match('/->(' . preg_quote($method, '/') . ')\s*\(/', $content)) {
                     $lineNumber = $this->findLineNumber($content, $method);
+                    $canAutoFix = $info['auto_fixable'] ?? false;
                     $issues[] = [
                         'severity' => 'warning',
                         'category' => 'deprecated_method',
@@ -215,8 +216,10 @@ class CompatibilityScanner implements CompatibilityScannerInterface
                         'line_number' => $lineNumber,
                         'description' => "Uses deprecated method '{$method}' ({$info['context']})",
                         'suggestion' => "Replace with '{$info['replacement']}'",
-                        'is_auto_fixable' => false,
+                        'is_auto_fixable' => $canAutoFix,
                         'module_name' => $this->getModuleNameFromPath($file),
+                        'old_value' => $method,
+                        'new_value' => $info['replacement'],
                     ];
                 }
             }

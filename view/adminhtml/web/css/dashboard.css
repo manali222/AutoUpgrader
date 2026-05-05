@@ -760,6 +760,87 @@
     font-size: 13px;
 }
 
+/* Auto-fix area */
+.autofix-area {
+    margin-bottom: 24px;
+}
+
+.autofix-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 20px;
+    gap: 20px;
+}
+
+.autofix-info p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--au-text-muted);
+}
+
+/* Fixed status badge */
+.fix-done {
+    background: #dcfce7;
+    color: var(--au-success);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.fix-manual {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Readiness panel */
+.readiness-panel {
+    background: var(--au-bg);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.readiness-item {
+    padding: 8px 12px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.readiness-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.readiness-dot--green { background: var(--au-success); }
+.readiness-dot--red { background: var(--au-danger); }
+.readiness-dot--yellow { background: var(--au-warning); }
+
+.readiness-item--blocked {
+    color: var(--au-danger);
+    font-weight: 500;
+}
+
+.readiness-item--ok {
+    color: var(--au-success);
+}
+
+.readiness-item--warning {
+    color: var(--au-warning);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .autoupgrader-header {

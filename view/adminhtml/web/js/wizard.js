@@ -3,6 +3,7 @@ define(['jquery'], function ($) {
 
     return function (config) {
         var scanUrl = config.scanUrl,
+            fixUrl = config.fixUrl,
             executeUrl = config.executeUrl,
             progressUrl = config.progressUrl,
             rollbackUrl = config.rollbackUrl,
@@ -95,12 +96,25 @@ define(['jquery'], function ($) {
         function renderReview() {
             if (!scanData) return;
 
+            var issues = scanData.issues || [];
+            var unfixedCritical = 0;
+            var unfixedErrors = 0;
+            var autoFixableCount = 0;
+
+            issues.forEach(function (i) {
+                if (i.is_auto_fixable && !i.is_fixed) autoFixableCount++;
+                if (!i.is_auto_fixable && !i.is_fixed) {
+                    if (i.severity === 'critical') unfixedCritical++;
+                    if (i.severity === 'error') unfixedErrors++;
+                }
+            });
+
             // Stats
             var statsHtml = '';
             var cards = [
                 {n: scanData.critical_issues || 0, l: 'Critical', c: 'danger'},
                 {n: scanData.warnings || 0, l: 'Warnings', c: 'warning'},
-                {n: scanData.auto_fixable || 0, l: 'Auto-Fixable', c: 'success'},
+                {n: autoFixableCount, l: 'Auto-Fixable', c: 'success'},
                 {n: scanData.total_issues || 0, l: 'Total Issues', c: 'info'}
             ];
             cards.forEach(function (c) {
@@ -111,6 +125,14 @@ define(['jquery'], function ($) {
                 statsHtml += '</div></div>';
             });
             $('#review-stats').html(statsHtml);
+
+            // Auto-fix button
+            if (autoFixableCount > 0) {
+                $('#review-autofix-area').show();
+                $('#autofix-count').text(autoFixableCount);
+            } else {
+                $('#review-autofix-area').hide();
+            }
 
             // Files
             var files = scanData.impacted_files || [];
@@ -125,21 +147,28 @@ define(['jquery'], function ($) {
             $('#review-files').html(filesHtml);
 
             // Issues
-            var issues = scanData.issues || [];
             var issuesHtml = '';
             if (issues.length === 0) {
                 issuesHtml = '<p class="no-issues">No issues detected.</p>';
             } else {
                 issuesHtml = '<table class="autoupgrader-table"><thead><tr>';
-                issuesHtml += '<th>Severity</th><th>File</th><th>Description</th><th>Auto-Fix</th>';
+                issuesHtml += '<th>Severity</th><th>File</th><th>Description</th><th>Status</th>';
                 issuesHtml += '</tr></thead><tbody>';
                 issues.forEach(function (i) {
-                    var color = i.severity === 'critical' ? '#dc2626' : i.severity === 'error' ? '#d97706' : '#64748b';
+                    var color = i.severity === 'critical' ? '#dc2626' : i.severity === 'error' ? '#d97706' : i.severity === 'warning' ? '#d97706' : '#64748b';
+                    var statusLabel = '';
+                    if (i.is_fixed) {
+                        statusLabel = '<span class="fix-done">Fixed</span>';
+                    } else if (i.is_auto_fixable) {
+                        statusLabel = '<span class="fix-yes">Auto-Fixable</span>';
+                    } else {
+                        statusLabel = '<span class="fix-manual">Manual</span>';
+                    }
                     issuesHtml += '<tr>';
                     issuesHtml += '<td><span style="color:' + color + ';font-weight:600">' + i.severity + '</span></td>';
                     issuesHtml += '<td class="mono">' + (i.file_path || '').split('/').pop() + ':' + (i.line_number || '') + '</td>';
                     issuesHtml += '<td>' + (i.description || '') + '<br><small>' + (i.suggestion || '') + '</small></td>';
-                    issuesHtml += '<td>' + (i.is_auto_fixable ? '<span class="fix-yes">Auto</span>' : 'Manual') + '</td>';
+                    issuesHtml += '<td>' + statusLabel + '</td>';
                     issuesHtml += '</tr>';
                 });
                 issuesHtml += '</tbody></table>';
@@ -149,24 +178,129 @@ define(['jquery'], function ($) {
             // Extensions
             var exts = scanData.extensions || [];
             var extHtml = '';
+            var hasBlockingExtensions = false;
             if (exts.length === 0) {
                 extHtml = '<tr><td colspan="4">No third-party extensions found.</td></tr>';
             } else {
                 exts.forEach(function (e) {
-                    var sc = e.status === 'compatible' ? 'color:#16a34a' : e.status === 'no_compatible_version' ? 'color:#dc2626' : 'color:#d97706';
+                    var statusText = (e.status || '').replace(/_/g, ' ');
+                    var sc = 'color:#d97706';
+                    if (e.status === 'compatible') sc = 'color:#16a34a';
+                    else if (e.status === 'no_compatible_version') { sc = 'color:#dc2626'; hasBlockingExtensions = true; }
+                    else if (e.status === 'manual_check' || e.status === 'check_failed') sc = 'color:#d97706';
+                    else if (e.status === 'not_found') { sc = 'color:#d97706'; statusText = 'will check during upgrade'; }
+
                     extHtml += '<tr>';
                     extHtml += '<td>' + e.package_name + '</td>';
                     extHtml += '<td>' + (e.current_version || '') + '</td>';
                     extHtml += '<td>' + (e.compatible_version || 'N/A') + '</td>';
-                    extHtml += '<td><span style="' + sc + ';font-weight:600">' + (e.status || '').replace(/_/g, ' ') + '</span></td>';
+                    extHtml += '<td><span style="' + sc + ';font-weight:600">' + statusText + '</span></td>';
                     extHtml += '</tr>';
                 });
             }
             $('#review-extensions').html(extHtml);
+
+            // Readiness check - gate the upgrade
+            updateReadiness(unfixedCritical, unfixedErrors, hasBlockingExtensions);
         }
+
+        function updateReadiness(unfixedCritical, unfixedErrors, hasBlockingExtensions) {
+            var canProceed = true;
+            var readinessHtml = '';
+
+            if (unfixedCritical > 0) {
+                canProceed = false;
+                readinessHtml += '<div class="readiness-item readiness-item--blocked">';
+                readinessHtml += '<span class="readiness-dot readiness-dot--red"></span> ';
+                readinessHtml += unfixedCritical + ' critical issue(s) must be resolved before upgrading';
+                readinessHtml += '</div>';
+            } else {
+                readinessHtml += '<div class="readiness-item readiness-item--ok">';
+                readinessHtml += '<span class="readiness-dot readiness-dot--green"></span> No critical issues';
+                readinessHtml += '</div>';
+            }
+
+            if (unfixedErrors > 0) {
+                readinessHtml += '<div class="readiness-item readiness-item--warning">';
+                readinessHtml += '<span class="readiness-dot readiness-dot--yellow"></span> ';
+                readinessHtml += unfixedErrors + ' error(s) detected - auto-fix recommended';
+                readinessHtml += '</div>';
+            } else {
+                readinessHtml += '<div class="readiness-item readiness-item--ok">';
+                readinessHtml += '<span class="readiness-dot readiness-dot--green"></span> No errors';
+                readinessHtml += '</div>';
+            }
+
+            if (hasBlockingExtensions) {
+                readinessHtml += '<div class="readiness-item readiness-item--warning">';
+                readinessHtml += '<span class="readiness-dot readiness-dot--yellow"></span> ';
+                readinessHtml += 'Some extensions may need manual updates';
+                readinessHtml += '</div>';
+            } else {
+                readinessHtml += '<div class="readiness-item readiness-item--ok">';
+                readinessHtml += '<span class="readiness-dot readiness-dot--green"></span> Extensions OK';
+                readinessHtml += '</div>';
+            }
+
+            $('#review-readiness').html(readinessHtml);
+            $('#btn-step3-next').prop('disabled', !canProceed);
+            if (!canProceed) {
+                $('#btn-step3-next').text('Fix Critical Issues to Continue');
+            } else {
+                $('#btn-step3-next').html('Next: Confirm Upgrade &rarr;');
+            }
+        }
+
+        // Auto-fix button handler
+        $('#btn-autofix').on('click', function () {
+            var btn = $(this);
+            btn.prop('disabled', true).text('Applying fixes...');
+            $.ajax({
+                url: fixUrl,
+                type: 'POST',
+                dataType: 'json',
+                data: {form_key: formKey, scan_id: scanData.scan_id},
+                success: function (resp) {
+                    if (resp.success && resp.data) {
+                        var fixResult = resp.data;
+                        btn.text(fixResult.fixed_count + ' fixed, ' + fixResult.failed_count + ' failed');
+                        btn.addClass('autoupgrader-btn--success').removeClass('autoupgrader-btn--primary');
+
+                        // Update issue statuses in scanData
+                        if (fixResult.details) {
+                            fixResult.details.forEach(function (d) {
+                                (scanData.issues || []).forEach(function (issue) {
+                                    if (issue.file_path === d.file && d.status === 'fixed') {
+                                        issue.is_fixed = true;
+                                    }
+                                });
+                            });
+                        }
+
+                        // Mark auto-fixable issues as fixed
+                        (scanData.issues || []).forEach(function (issue) {
+                            if (issue.is_auto_fixable) {
+                                issue.is_fixed = true;
+                            }
+                        });
+
+                        // Re-render review
+                        renderReview();
+                    } else {
+                        btn.text('Fix Failed - ' + (resp.message || 'Unknown error'));
+                        btn.prop('disabled', false);
+                    }
+                },
+                error: function () {
+                    btn.text('Fix Failed - Server Error');
+                    btn.prop('disabled', false);
+                }
+            });
+        });
 
         $('#btn-step3-back').on('click', function () { goToStep(1); });
         $('#btn-step3-next').on('click', function () {
+            if ($(this).prop('disabled')) return;
             var targetVersion = $('#target-version').val();
             $('#confirm-summary').html(
                 '<div class="confirm-detail"><strong>From:</strong> ' + currentVersion + '</div>' +

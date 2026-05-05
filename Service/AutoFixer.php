@@ -103,13 +103,17 @@ class AutoFixer implements AutoFixerInterface
                 $content = $this->fixDeprecatedClass($content, $issue);
                 break;
 
+            case 'deprecated_method':
+                $content = $this->fixDeprecatedMethod($content, $issue);
+                break;
+
             case 'php_compatibility':
                 $content = $this->fixPhpCompatibility($content, $issue);
                 break;
 
             case 'composer_constraint':
                 $content = $this->fixComposerConstraint($filePath, $issue);
-                return true; // Composer fix handles its own file writing
+                return true;
 
             default:
                 return false;
@@ -149,6 +153,25 @@ class AutoFixer implements AutoFixerInterface
 
         // Replace fully qualified references
         $content = str_replace('\\' . $oldValue, '\\' . $newValue, $content);
+
+        return $content;
+    }
+
+    private function fixDeprecatedMethod(string $content, array $issue): string
+    {
+        $oldMethod = $issue['old_value'] ?? '';
+        $newMethod = $issue['new_value'] ?? '';
+
+        if (empty($oldMethod) || empty($newMethod)) {
+            return $content;
+        }
+
+        // Replace ->getEntityId( with ->getId( etc.
+        $content = preg_replace(
+            '/->(' . preg_quote($oldMethod, '/') . ')\s*\(/',
+            '->' . $newMethod . '(',
+            $content
+        );
 
         return $content;
     }
