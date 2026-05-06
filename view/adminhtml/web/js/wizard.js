@@ -16,7 +16,21 @@ define(['jquery'], function ($) {
             currentStep = 1,
             scanData = null,
             upgradeId = null,
-            progressTimer = null;
+            progressTimer = null,
+            upgradeLocked = false;
+
+        // ─── Page Lock (prevent refresh/navigation during upgrade) ───
+        function lockPage() {
+            upgradeLocked = true;
+            $(window).on('beforeunload.upgradelock', function () {
+                return 'An upgrade is in progress. Leaving this page may corrupt your Magento installation.';
+            });
+        }
+
+        function unlockPage() {
+            upgradeLocked = false;
+            $(window).off('beforeunload.upgradelock');
+        }
 
         // ─── Wizard Navigation ───
         function goToStep(step) {
@@ -424,6 +438,7 @@ define(['jquery'], function ($) {
         $('#btn-step5-back').on('click', function () { goToStep(4); });
         $('#btn-step5-start').on('click', function () {
             $(this).prop('disabled', true).text('Starting...');
+            lockPage();
             goToStep(6);
             executeUpgrade();
         });
@@ -576,6 +591,7 @@ define(['jquery'], function ($) {
         }
 
         function showUpgradeError(msg) {
+            unlockPage();
             $('#upgrade-badge').text('Failed').attr('class', 'status-badge status-badge--failed');
             $('#progress-error').show().html(
                 '<strong>Error:</strong> ' + msg +
@@ -586,6 +602,7 @@ define(['jquery'], function ($) {
         }
 
         function showCompletion(success, data) {
+            unlockPage();
             goToStep(7);
             var html = '';
             if (success) {
