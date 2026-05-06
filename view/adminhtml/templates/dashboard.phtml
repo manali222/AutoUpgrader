@@ -197,8 +197,32 @@ $systemCheckUrl = $block->getSystemCheckUrl();
         </div>
     </div>
 
+    <!-- Step 4: Review (placeholder for scan review before confirm) -->
+    <div id="wizard-step-4" class="autoupgrader-panel wizard-step" style="display:none;">
+        <div class="autoupgrader-panel__header">
+            <h2>Step 4: Review Results</h2>
+        </div>
+        <div class="autoupgrader-panel__body">
+            <div id="review-summary"></div>
+            <div class="autoupgrader-actions">
+                <button id="btn-step4-back" class="autoupgrader-btn autoupgrader-btn--secondary" type="button">Back</button>
+                <button id="btn-step4-next" class="autoupgrader-btn autoupgrader-btn--primary" type="button">Next: Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 5: Confirm (placeholder - modal is used) -->
+    <div id="wizard-step-5" class="autoupgrader-panel wizard-step" style="display:none;">
+        <div class="autoupgrader-panel__header">
+            <h2>Step 5: Confirm Upgrade</h2>
+        </div>
+        <div class="autoupgrader-panel__body">
+            <p>Please confirm the upgrade in the modal dialog.</p>
+        </div>
+    </div>
+
     <!-- Step 6: Progress Panel -->
-    <div id="progress-panel" class="autoupgrader-panel" style="display:none;">
+    <div id="wizard-step-6" class="autoupgrader-panel wizard-step" style="display:none;">
         <div class="autoupgrader-panel__header">
             <h2>Step 6: Upgrade Progress</h2>
             <span id="progress-status" class="status-badge status-badge--running">In Progress</span>
@@ -228,6 +252,20 @@ $systemCheckUrl = $block->getSystemCheckUrl();
                 <button id="btn-rollback" class="autoupgrader-btn autoupgrader-btn--warning" type="button">
                     Rollback to Previous Version
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 7: Done -->
+    <div id="wizard-step-7" class="autoupgrader-panel wizard-step" style="display:none;">
+        <div class="autoupgrader-panel__header">
+            <h2>Step 7: Upgrade Complete</h2>
+            <span class="status-badge status-badge--completed">Done</span>
+        </div>
+        <div class="autoupgrader-panel__body">
+            <div class="autoupgrader-success">
+                <p><strong>&#10003; Your Magento installation has been successfully upgraded!</strong></p>
+                <p>Please verify your storefront and admin panel are working correctly.</p>
             </div>
         </div>
     </div>

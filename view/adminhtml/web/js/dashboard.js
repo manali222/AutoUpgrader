@@ -196,13 +196,13 @@ define([
                         startProgressTracking();
                     } else {
                         updateProgressUI(null, response.message, 'failed');
-                        $('#progress-panel').show();
+                        goToStep(6);
                         $('#rollback-actions').show();
                     }
                 },
                 error: function () {
                     updateProgressUI(null, 'Failed to start upgrade process.', 'failed');
-                    $('#progress-panel').show();
+                    goToStep(6);
                     $('#rollback-actions').show();
                 }
             });
@@ -210,7 +210,6 @@ define([
 
         // Progress Tracking
         function startProgressTracking() {
-            $('#progress-panel').show();
             $('#progress-status').text('In Progress').attr('class', 'status-badge status-badge--running');
 
             progressInterval = setInterval(function () {
