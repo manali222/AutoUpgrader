@@ -12,7 +12,7 @@ use Psr\Log\LoggerInterface;
 
 class VersionResolver implements VersionResolverInterface
 {
-    private const PACKAGIST_API = 'https://repo.packagist.org/p2/magento/product-community-edition.json';
+    private const PACKAGIST_API = 'https://repo.packagist.org/p2/magento/project-community-edition.json';
 
     public function __construct(
         private readonly ProductMetadataInterface $productMetadata,
@@ -32,7 +32,7 @@ class VersionResolver implements VersionResolverInterface
             $response = $this->curl->getBody();
             $data = $this->json->unserialize($response);
 
-            $packages = $data['packages']['magento/product-community-edition'] ?? [];
+            $packages = $data['packages']['magento/project-community-edition'] ?? [];
 
             foreach ($packages as $package) {
                 $version = $package['version'] ?? '';
@@ -94,8 +94,10 @@ class VersionResolver implements VersionResolverInterface
     private function getFallbackVersions(string $currentVersion): array
     {
         $knownVersions = [
-            '2.4.8-p4', '2.4.8-p3', '2.4.8-p2', '2.4.8-p1', '2.4.8',
-            '2.4.7-p4', '2.4.7-p3', '2.4.7-p2', '2.4.7-p1', '2.4.7',
+            '2.4.8', '2.4.8-p1', '2.4.8-p2', '2.4.8-p3', '2.4.8-p4',
+            '2.4.7-p5', '2.4.7-p4', '2.4.7-p3', '2.4.7-p2', '2.4.7-p1', '2.4.7',
+            '2.4.6-p8', '2.4.6-p7', '2.4.6-p6', '2.4.6-p5', '2.4.6-p4', '2.4.6-p3', '2.4.6-p2', '2.4.6-p1', '2.4.6',
+            '2.4.5-p10', '2.4.5-p9', '2.4.5-p8', '2.4.5-p7', '2.4.5-p6', '2.4.5-p5', '2.4.5-p4', '2.4.5-p3', '2.4.5-p2', '2.4.5-p1', '2.4.5',
         ];
 
         $versions = [];
