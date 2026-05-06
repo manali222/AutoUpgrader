@@ -54,7 +54,10 @@ class VersionResolver implements VersionResolverInterface
             $this->logger->error('AutoUpgrader: Failed to fetch versions from Packagist', [
                 'error' => $e->getMessage()
             ]);
-            // Return hardcoded fallback for offline environments
+        }
+
+        // Merge with fallback versions if API returned nothing useful
+        if (empty($versions)) {
             $versions = $this->getFallbackVersions($currentVersion);
         }
 
