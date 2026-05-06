@@ -26,26 +26,31 @@ $extensions = $block->getInstalledExtensions();
         <div class="wizard-step-line"></div>
         <div class="wizard-step-indicator" data-step="2">
             <div class="wizard-step-num">2</div>
-            <div class="wizard-step-label">Scan</div>
+            <div class="wizard-step-label">System Check</div>
         </div>
         <div class="wizard-step-line"></div>
         <div class="wizard-step-indicator" data-step="3">
             <div class="wizard-step-num">3</div>
-            <div class="wizard-step-label">Review</div>
+            <div class="wizard-step-label">Scan</div>
         </div>
         <div class="wizard-step-line"></div>
         <div class="wizard-step-indicator" data-step="4">
             <div class="wizard-step-num">4</div>
-            <div class="wizard-step-label">Confirm</div>
+            <div class="wizard-step-label">Review</div>
         </div>
         <div class="wizard-step-line"></div>
         <div class="wizard-step-indicator" data-step="5">
             <div class="wizard-step-num">5</div>
-            <div class="wizard-step-label">Upgrade</div>
+            <div class="wizard-step-label">Confirm</div>
         </div>
         <div class="wizard-step-line"></div>
         <div class="wizard-step-indicator" data-step="6">
             <div class="wizard-step-num">6</div>
+            <div class="wizard-step-label">Upgrade</div>
+        </div>
+        <div class="wizard-step-line"></div>
+        <div class="wizard-step-indicator" data-step="7">
+            <div class="wizard-step-num">7</div>
             <div class="wizard-step-label">Done</div>
         </div>
     </div>
@@ -76,6 +81,38 @@ $extensions = $block->getInstalledExtensions();
                 <div class="wizard-nav">
                     <span></span>
                     <button id="btn-step1-next" class="autoupgrader-btn autoupgrader-btn--primary" type="button" disabled>
+                        Next: System Check &rarr;
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================== STEP 2: System Check ======================== -->
+    <div class="wizard-panel" id="wizard-step-2" style="display:none;">
+        <div class="autoupgrader-panel">
+            <div class="autoupgrader-panel__header">
+                <h2>Step 2: System Compatibility Check</h2>
+                <span id="syscheck-badge" class="status-badge status-badge--running">Checking...</span>
+            </div>
+            <div class="autoupgrader-panel__body">
+                <p>Verifying your server meets the requirements for the selected Magento version.</p>
+                <div id="syscheck-spinner" class="scan-progress-area">
+                    <div class="scan-spinner"></div>
+                    <p>Running system checks...</p>
+                </div>
+                <div id="syscheck-results" style="display:none;">
+                    <table class="autoupgrader-table">
+                        <thead>
+                            <tr><th>Requirement</th><th>Current</th><th>Required</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="syscheck-table-body"></tbody>
+                    </table>
+                    <div id="syscheck-summary" class="readiness-panel" style="margin-top:16px;"></div>
+                </div>
+                <div class="wizard-nav">
+                    <button id="btn-step2-back" class="autoupgrader-btn autoupgrader-btn--secondary" type="button">&larr; Back</button>
+                    <button id="btn-step2-next" class="autoupgrader-btn autoupgrader-btn--primary" type="button" disabled>
                         Next: Run Compatibility Scan &rarr;
                     </button>
                 </div>
@@ -83,11 +120,11 @@ $extensions = $block->getInstalledExtensions();
         </div>
     </div>
 
-    <!-- ======================== STEP 2: Scanning ======================== -->
-    <div class="wizard-panel" id="wizard-step-2" style="display:none;">
+    <!-- ======================== STEP 3: Scanning ======================== -->
+    <div class="wizard-panel" id="wizard-step-3" style="display:none;">
         <div class="autoupgrader-panel">
             <div class="autoupgrader-panel__header">
-                <h2>Step 2: Compatibility Scan</h2>
+                <h2>Step 3: Compatibility Scan</h2>
                 <span id="scan-badge" class="status-badge status-badge--running">Scanning...</span>
             </div>
             <div class="autoupgrader-panel__body">
@@ -100,10 +137,10 @@ $extensions = $block->getInstalledExtensions();
         </div>
     </div>
 
-    <!-- ======================== STEP 3: Review Results ======================== -->
-    <div class="wizard-panel" id="wizard-step-3" style="display:none;">
+    <!-- ======================== STEP 4: Review Results ======================== -->
+    <div class="wizard-panel" id="wizard-step-4" style="display:none;">
         <div class="autoupgrader-panel">
-            <div class="autoupgrader-panel__header"><h2>Step 3: Review Scan Results</h2></div>
+            <div class="autoupgrader-panel__header"><h2>Step 4: Review Scan Results</h2></div>
             <div class="autoupgrader-panel__body">
                 <!-- Summary cards -->
                 <div class="autoupgrader-cards" id="review-stats"></div>
@@ -151,8 +188,8 @@ $extensions = $block->getInstalledExtensions();
                 </div>
 
                 <div class="wizard-nav">
-                    <button id="btn-step3-back" class="autoupgrader-btn autoupgrader-btn--secondary" type="button">&larr; Back</button>
-                    <button id="btn-step3-next" class="autoupgrader-btn autoupgrader-btn--primary" type="button">
+                    <button id="btn-step4-back" class="autoupgrader-btn autoupgrader-btn--secondary" type="button">&larr; Back</button>
+                    <button id="btn-step4-next" class="autoupgrader-btn autoupgrader-btn--primary" type="button">
                         Next: Confirm Upgrade &rarr;
                     </button>
                 </div>
@@ -160,10 +197,10 @@ $extensions = $block->getInstalledExtensions();
         </div>
     </div>
 
-    <!-- ======================== STEP 4: Confirm ======================== -->
-    <div class="wizard-panel" id="wizard-step-4" style="display:none;">
+    <!-- ======================== STEP 5: Confirm ======================== -->
+    <div class="wizard-panel" id="wizard-step-5" style="display:none;">
         <div class="autoupgrader-panel">
-            <div class="autoupgrader-panel__header"><h2>Step 4: Confirm &amp; Start Upgrade</h2></div>
+            <div class="autoupgrader-panel__header"><h2>Step 5: Confirm &amp; Start Upgrade</h2></div>
             <div class="autoupgrader-panel__body">
                 <div class="confirm-warning">
                     <strong>&#9888; You are about to upgrade your Magento installation.</strong><br>
@@ -187,8 +224,8 @@ $extensions = $block->getInstalledExtensions();
                 </ol>
 
                 <div class="wizard-nav">
-                    <button id="btn-step4-back" class="autoupgrader-btn autoupgrader-btn--secondary" type="button">&larr; Back</button>
-                    <button id="btn-step4-start" class="autoupgrader-btn autoupgrader-btn--danger autoupgrader-btn--large" type="button">
+                    <button id="btn-step5-back" class="autoupgrader-btn autoupgrader-btn--secondary" type="button">&larr; Back</button>
+                    <button id="btn-step5-start" class="autoupgrader-btn autoupgrader-btn--danger autoupgrader-btn--large" type="button">
                         &#9654; Start Automated Upgrade Now
                     </button>
                 </div>
@@ -196,11 +233,11 @@ $extensions = $block->getInstalledExtensions();
         </div>
     </div>
 
-    <!-- ======================== STEP 5: Live Progress ======================== -->
-    <div class="wizard-panel" id="wizard-step-5" style="display:none;">
+    <!-- ======================== STEP 6: Live Progress ======================== -->
+    <div class="wizard-panel" id="wizard-step-6" style="display:none;">
         <div class="autoupgrader-panel">
             <div class="autoupgrader-panel__header">
-                <h2>Step 5: Upgrading...</h2>
+                <h2>Step 6: Upgrading...</h2>
                 <span id="upgrade-badge" class="status-badge status-badge--running">In Progress</span>
             </div>
             <div class="autoupgrader-panel__body">
@@ -224,8 +261,8 @@ $extensions = $block->getInstalledExtensions();
         </div>
     </div>
 
-    <!-- ======================== STEP 6: Complete ======================== -->
-    <div class="wizard-panel" id="wizard-step-6" style="display:none;">
+    <!-- ======================== STEP 7: Complete ======================== -->
+    <div class="wizard-panel" id="wizard-step-7" style="display:none;">
         <div class="autoupgrader-panel">
             <div class="autoupgrader-panel__header"><h2>Upgrade Complete</h2></div>
             <div class="autoupgrader-panel__body" id="completion-body">
@@ -242,8 +279,11 @@ $extensions = $block->getInstalledExtensions();
             "scanUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/scan/run')) ?>",
             "fixUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/scan/fix')) ?>",
             "executeUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/upgrade/execute')) ?>",
+            "prepareUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/upgrade/prepare')) ?>",
             "progressUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/upgrade/progress')) ?>",
+            "statusUrl": "<?= $block->escapeUrl($block->getBaseUrl()) ?>autoupgrader_status.php",
             "rollbackUrl": "<?= $block->escapeUrl($block->getUrl('autoupgrader/upgrade/rollback')) ?>",
+            "systemCheckUrl": "<?= $block->escapeUrl($block->getSystemCheckUrl()) ?>",
             "formKey": "<?= $block->escapeUrl($block->getFormKey()) ?>",
             "currentVersion": "<?= $block->escapeHtml($currentVersion) ?>"
         }

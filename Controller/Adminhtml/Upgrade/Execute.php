@@ -13,6 +13,7 @@ use MageUpgrade\AutoUpgrader\Api\AutoFixerInterface;
 use MageUpgrade\AutoUpgrader\Api\BackupManagerInterface;
 use MageUpgrade\AutoUpgrader\Api\Data\UpgradeLogInterface;
 use MageUpgrade\AutoUpgrader\Api\ExtensionManagerInterface;
+use Magento\Framework\Filesystem;
 use MageUpgrade\AutoUpgrader\Api\ProgressTrackerInterface;
 use MageUpgrade\AutoUpgrader\Api\VersionResolverInterface;
 use MageUpgrade\AutoUpgrader\Model\UpgradeLog;
@@ -46,29 +47,39 @@ class Execute extends Action
         $result = $this->jsonFactory->create();
         $targetVersion = $this->getRequest()->getParam('target_version');
         $scanId = (int) $this->getRequest()->getParam('scan_id', 0);
+        $existingUpgradeId = (int) $this->getRequest()->getParam('upgrade_id', 0);
 
         if (empty($targetVersion)) {
             return $result->setData(['success' => false, 'message' => 'Target version is required']);
         }
 
-        $currentVersion = $this->versionResolver->getCurrentVersion();
         $rootDir = $this->directoryList->getRoot();
 
-        // Create upgrade log
-        /** @var UpgradeLog $log */
-        $log = $this->upgradeLogFactory->create();
-        $log->setFromVersion($currentVersion);
-        $log->setToVersion($targetVersion);
-        $log->setStatus(UpgradeLogInterface::STATUS_BACKING_UP);
-        $log->setProgressPercent(0);
-        $log->setCurrentStep('Starting...');
-        $log->setScanId($scanId ?: null);
-        $log->setInitiatedBy('admin');
-        $log->setStartedAt(date('Y-m-d H:i:s'));
-        $log->setStepsLog($this->json->serialize([]));
-        $this->upgradeLogResource->save($log);
-
-        $upgradeId = (int) $log->getUpgradeId();
+        // Load existing log (created by Prepare controller) or create new one
+        if ($existingUpgradeId) {
+            /** @var UpgradeLog $log */
+            $log = $this->upgradeLogFactory->create();
+            $this->upgradeLogResource->load($log, $existingUpgradeId);
+            if (!$log->getUpgradeId()) {
+                return $result->setData(['success' => false, 'message' => 'Invalid upgrade ID']);
+            }
+            $upgradeId = $existingUpgradeId;
+        } else {
+            $currentVersion = $this->versionResolver->getCurrentVersion();
+            /** @var UpgradeLog $log */
+            $log = $this->upgradeLogFactory->create();
+            $log->setFromVersion($currentVersion);
+            $log->setToVersion($targetVersion);
+            $log->setStatus(UpgradeLogInterface::STATUS_BACKING_UP);
+            $log->setProgressPercent(0);
+            $log->setCurrentStep('Starting...');
+            $log->setScanId($scanId ?: null);
+            $log->setInitiatedBy('admin');
+            $log->setStartedAt(date('Y-m-d H:i:s'));
+            $log->setStepsLog($this->json->serialize([]));
+            $this->upgradeLogResource->save($log);
+            $upgradeId = (int) $log->getUpgradeId();
+        }
 
         try {
             // ── Step 1: Backup ──

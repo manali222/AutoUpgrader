@@ -5,8 +5,12 @@ define(['jquery'], function ($) {
         var scanUrl = config.scanUrl,
             fixUrl = config.fixUrl,
             executeUrl = config.executeUrl,
+            prepareUrl = config.prepareUrl,
             progressUrl = config.progressUrl,
+            statusUrl = config.statusUrl,
+            statusToken = null,
             rollbackUrl = config.rollbackUrl,
+            systemCheckUrl = config.systemCheckUrl,
             formKey = config.formKey,
             currentVersion = config.currentVersion,
             currentStep = 1,
@@ -45,10 +49,114 @@ define(['jquery'], function ($) {
 
         $('#btn-step1-next').on('click', function () {
             goToStep(2);
+            runSystemCheck();
+        });
+
+        // ─── STEP 2: System Check ───
+        function runSystemCheck() {
+            var targetVersion = $('#target-version').val();
+            $('#syscheck-badge').text('Checking...').attr('class', 'status-badge status-badge--running');
+            $('#syscheck-spinner').show();
+            $('#syscheck-results').hide();
+            $('#btn-step2-next').prop('disabled', true);
+
+            $.ajax({
+                url: systemCheckUrl,
+                type: 'POST',
+                dataType: 'json',
+                data: {form_key: formKey, target_version: targetVersion},
+                success: function (resp) {
+                    $('#syscheck-spinner').hide();
+                    $('#syscheck-results').show();
+
+                    if (resp.success) {
+                        renderSystemChecks(resp.checks, resp.compatible);
+                    } else {
+                        $('#syscheck-badge').text('Failed').attr('class', 'status-badge status-badge--failed');
+                        $('#syscheck-summary').html(
+                            '<div class="readiness-item readiness-item--blocked">' +
+                            '<span class="readiness-dot readiness-dot--red"></span> ' +
+                            'System check failed: ' + (resp.message || 'Unknown error') +
+                            '</div>'
+                        );
+                    }
+                },
+                error: function () {
+                    $('#syscheck-spinner').hide();
+                    $('#syscheck-results').show();
+                    $('#syscheck-badge').text('Failed').attr('class', 'status-badge status-badge--failed');
+                    $('#syscheck-summary').html(
+                        '<div class="readiness-item readiness-item--blocked">' +
+                        '<span class="readiness-dot readiness-dot--red"></span> ' +
+                        'System check request failed. Check server logs.' +
+                        '</div>'
+                    );
+                }
+            });
+        }
+
+        function renderSystemChecks(checks, compatible) {
+            var tableHtml = '';
+            var failedCritical = 0;
+            var failedNonCritical = 0;
+
+            checks.forEach(function (check) {
+                var statusHtml;
+                if (check.passed) {
+                    statusHtml = '<span style="color:#16a34a;font-weight:600">Pass</span>';
+                } else if (check.critical) {
+                    statusHtml = '<span style="color:#dc2626;font-weight:600">FAIL</span>';
+                    failedCritical++;
+                } else {
+                    statusHtml = '<span style="color:#d97706;font-weight:600">Warning</span>';
+                    failedNonCritical++;
+                }
+
+                tableHtml += '<tr>';
+                tableHtml += '<td>' + check.requirement + '</td>';
+                tableHtml += '<td>' + check.current + '</td>';
+                tableHtml += '<td>' + check.required + '</td>';
+                tableHtml += '<td>' + statusHtml + '</td>';
+                tableHtml += '</tr>';
+            });
+
+            $('#syscheck-table-body').html(tableHtml);
+
+            var summaryHtml = '';
+            if (compatible) {
+                $('#syscheck-badge').text('Compatible').attr('class', 'status-badge status-badge--completed');
+                summaryHtml += '<div class="readiness-item readiness-item--ok">';
+                summaryHtml += '<span class="readiness-dot readiness-dot--green"></span> ';
+                summaryHtml += 'All system checks passed. Your server is compatible with the selected version.';
+                summaryHtml += '</div>';
+                $('#btn-step2-next').prop('disabled', false);
+            } else {
+                $('#syscheck-badge').text('Incompatible').attr('class', 'status-badge status-badge--failed');
+                if (failedCritical > 0) {
+                    summaryHtml += '<div class="readiness-item readiness-item--blocked">';
+                    summaryHtml += '<span class="readiness-dot readiness-dot--red"></span> ';
+                    summaryHtml += failedCritical + ' critical requirement(s) not met. Please resolve before continuing.';
+                    summaryHtml += '</div>';
+                }
+                if (failedNonCritical > 0) {
+                    summaryHtml += '<div class="readiness-item readiness-item--warning">';
+                    summaryHtml += '<span class="readiness-dot readiness-dot--yellow"></span> ';
+                    summaryHtml += failedNonCritical + ' non-critical warning(s) detected.';
+                    summaryHtml += '</div>';
+                }
+                $('#btn-step2-next').prop('disabled', true);
+            }
+
+            $('#syscheck-summary').html(summaryHtml);
+        }
+
+        $('#btn-step2-back').on('click', function () { goToStep(1); });
+        $('#btn-step2-next').on('click', function () {
+            goToStep(3);
             runScan();
         });
 
-        // ─── STEP 2: Scanning ───
+        // ─── STEP 3: Scanning ───
         function runScan() {
             var targetVersion = $('#target-version').val();
             $('#scan-badge').text('Scanning...').attr('class', 'status-badge status-badge--running');
@@ -72,7 +180,7 @@ define(['jquery'], function ($) {
                         $('#scan-status-text').text('Scan complete! Moving to review...');
                         setTimeout(function () {
                             renderReview();
-                            goToStep(3);
+                            goToStep(4);
                         }, 1500);
                     } else {
                         $('#scan-badge').text('Failed').attr('class', 'status-badge status-badge--failed');
@@ -92,7 +200,7 @@ define(['jquery'], function ($) {
             $('#scan-log').append('<div class="scan-log-entry">&gt; ' + msg + '</div>');
         }
 
-        // ─── STEP 3: Review ───
+        // ─── STEP 4: Review ───
         function renderReview() {
             if (!scanData) return;
 
@@ -243,11 +351,11 @@ define(['jquery'], function ($) {
             }
 
             $('#review-readiness').html(readinessHtml);
-            $('#btn-step3-next').prop('disabled', !canProceed);
+            $('#btn-step4-next').prop('disabled', !canProceed);
             if (!canProceed) {
-                $('#btn-step3-next').text('Fix Critical Issues to Continue');
+                $('#btn-step4-next').text('Fix Critical Issues to Continue');
             } else {
-                $('#btn-step3-next').html('Next: Confirm Upgrade &rarr;');
+                $('#btn-step4-next').html('Next: Confirm Upgrade &rarr;');
             }
         }
 
@@ -298,8 +406,8 @@ define(['jquery'], function ($) {
             });
         });
 
-        $('#btn-step3-back').on('click', function () { goToStep(1); });
-        $('#btn-step3-next').on('click', function () {
+        $('#btn-step4-back').on('click', function () { goToStep(1); });
+        $('#btn-step4-next').on('click', function () {
             if ($(this).prop('disabled')) return;
             var targetVersion = $('#target-version').val();
             $('#confirm-summary').html(
@@ -309,18 +417,18 @@ define(['jquery'], function ($) {
                 '<div class="confirm-detail"><strong>Extensions to upgrade:</strong> ' +
                     ((scanData && scanData.extensions) ? scanData.extensions.filter(function(e){return e.status==='compatible'}).length : 0) + '</div>'
             );
-            goToStep(4);
+            goToStep(5);
         });
 
-        // ─── STEP 4: Confirm ───
-        $('#btn-step4-back').on('click', function () { goToStep(3); });
-        $('#btn-step4-start').on('click', function () {
+        // ─── STEP 5: Confirm ───
+        $('#btn-step5-back').on('click', function () { goToStep(4); });
+        $('#btn-step5-start').on('click', function () {
             $(this).prop('disabled', true).text('Starting...');
-            goToStep(5);
+            goToStep(6);
             executeUpgrade();
         });
 
-        // ─── STEP 5: Execute ───
+        // ─── STEP 6: Execute ───
         function executeUpgrade() {
             var targetVersion = $('#target-version').val();
             var scanId = scanData ? scanData.scan_id : null;
@@ -347,8 +455,9 @@ define(['jquery'], function ($) {
             });
             $('#progress-timeline').html(timelineHtml);
 
+            // Phase 1: Create upgrade log to get upgrade_id
             $.ajax({
-                url: executeUrl,
+                url: prepareUrl,
                 type: 'POST',
                 dataType: 'json',
                 data: {
@@ -356,39 +465,59 @@ define(['jquery'], function ($) {
                     target_version: targetVersion,
                     scan_id: scanId
                 },
-                timeout: 0,
-                beforeSend: function () {
+                success: function (prepResp) {
+                    if (!prepResp.success) {
+                        showUpgradeError(prepResp.message || 'Failed to prepare upgrade');
+                        return;
+                    }
+
+                    upgradeId = prepResp.upgrade_id;
+                    statusToken = prepResp.status_token;
                     startProgressPolling();
+
+                    // Phase 2: Fire the long-running execute with the upgrade_id
+                    $.ajax({
+                        url: executeUrl,
+                        type: 'POST',
+                        dataType: 'json',
+                        data: {
+                            form_key: formKey,
+                            target_version: targetVersion,
+                            scan_id: scanId,
+                            upgrade_id: upgradeId
+                        },
+                        timeout: 0,
+                        success: function (resp) {
+                            stopProgressPolling();
+                            if (resp.success) {
+                                fetchFinalProgress();
+                            } else {
+                                showUpgradeError(resp.message || 'Upgrade failed');
+                            }
+                        },
+                        error: function () {
+                            stopProgressPolling();
+                            if (upgradeId) {
+                                fetchFinalProgress();
+                            } else {
+                                showUpgradeError('Connection lost. Check server logs.');
+                            }
+                        }
+                    });
                 },
-                success: function (resp) {
-                    stopProgressPolling();
-                    if (resp.success) {
-                        upgradeId = resp.upgrade_id;
-                        fetchFinalProgress();
-                    } else {
-                        showUpgradeError(resp.message || 'Upgrade failed');
-                    }
-                },
-                error: function (xhr) {
-                    stopProgressPolling();
-                    // Check if upgrade actually succeeded despite timeout
-                    if (upgradeId) {
-                        fetchFinalProgress();
-                    } else {
-                        showUpgradeError('Connection lost. Check server logs.');
-                    }
+                error: function () {
+                    showUpgradeError('Failed to prepare upgrade. Check server logs.');
                 }
             });
         }
 
         function startProgressPolling() {
             progressTimer = setInterval(function () {
-                if (!upgradeId) return;
+                if (!statusToken) return;
                 $.ajax({
-                    url: progressUrl,
+                    url: statusUrl + '?token=' + encodeURIComponent(statusToken),
                     type: 'GET',
                     dataType: 'json',
-                    data: {upgrade_id: upgradeId},
                     success: function (resp) {
                         if (resp.success && resp.data) {
                             updateProgressUI(resp.data);
@@ -432,17 +561,18 @@ define(['jquery'], function ($) {
         }
 
         function fetchFinalProgress() {
-            $.ajax({
-                url: progressUrl,
-                type: 'GET',
-                dataType: 'json',
-                data: {upgrade_id: upgradeId},
-                success: function (resp) {
-                    if (resp.success && resp.data) {
-                        updateProgressUI(resp.data);
+            if (statusToken) {
+                $.ajax({
+                    url: statusUrl + '?token=' + encodeURIComponent(statusToken),
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function (resp) {
+                        if (resp.success && resp.data) {
+                            updateProgressUI(resp.data);
+                        }
                     }
-                }
-            });
+                });
+            }
         }
 
         function showUpgradeError(msg) {
@@ -456,7 +586,7 @@ define(['jquery'], function ($) {
         }
 
         function showCompletion(success, data) {
-            goToStep(6);
+            goToStep(7);
             var html = '';
             if (success) {
                 html += '<div class="completion-success">';

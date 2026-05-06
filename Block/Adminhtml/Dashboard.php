@@ -54,4 +54,9 @@ class Dashboard extends Template
     {
         return $this->getUrl('autoupgrader/scan/run');
     }
+
+    public function getSystemCheckUrl(): string
+    {
+        return $this->getUrl('autoupgrader/scan/systemcheck');
+    }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MageUpgrade\AutoUpgrader\Service;
 
+use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\Framework\Serialize\Serializer\Json;
 use MageUpgrade\AutoUpgrader\Api\ProgressTrackerInterface;
 use MageUpgrade\AutoUpgrader\Model\UpgradeLog;
@@ -13,6 +14,8 @@ use Psr\Log\LoggerInterface;
 
 class ProgressTracker implements ProgressTrackerInterface
 {
+    private const PROGRESS_FILE = 'autoupgrader_progress.json';
+
     private const STEPS_ORDER = [
         self::STEP_BACKUP => ['label' => 'Creating Backup', 'weight' => 10],
         self::STEP_SCAN => ['label' => 'Compatibility Scan', 'weight' => 10],
@@ -29,6 +32,7 @@ class ProgressTracker implements ProgressTrackerInterface
     public function __construct(
         private readonly UpgradeLogFactory $upgradeLogFactory,
         private readonly UpgradeLogResource $upgradeLogResource,
+        private readonly DirectoryList $directoryList,
         private readonly Json $json,
         private readonly LoggerInterface $logger
     ) {
@@ -101,5 +105,70 @@ class ProgressTracker implements ProgressTrackerInterface
         $upgradeLog->setCurrentStep(self::STEPS_ORDER[$step]['label'] ?? $step);
 
         $this->upgradeLogResource->save($upgradeLog);
+
+        // Also write to JSON file for pub/autoupgrader_status.php polling
+        $this->writeProgressFile($upgradeLog, $stepsLog, $percent, $status === 'completed' && $step === self::STEP_VERIFY);
+    }
+
+    /**
+     * Initialize progress file with a token. Call before starting the upgrade.
+     */
+    public function initProgressFile(int $upgradeId, string $token): void
+    {
+        $data = [
+            'token' => $token,
+            'upgrade_id' => $upgradeId,
+            'status' => 'running',
+            'progress_percent' => 0,
+            'current_step' => 'Starting...',
+            'steps' => [],
+        ];
+
+        $filePath = $this->getProgressFilePath();
+        file_put_contents($filePath, json_encode($data, JSON_PRETTY_PRINT));
+    }
+
+    private function writeProgressFile(UpgradeLog $upgradeLog, array $stepsLog, int $percent, bool $isComplete): void
+    {
+        $filePath = $this->getProgressFilePath();
+
+        // Read existing file to preserve token
+        $existing = [];
+        if (file_exists($filePath)) {
+            $content = file_get_contents($filePath);
+            $existing = json_decode($content, true) ?: [];
+        }
+
+        $steps = [];
+        foreach (self::STEPS_ORDER as $stepKey => $stepInfo) {
+            $stepData = $stepsLog[$stepKey] ?? [];
+            $steps[] = [
+                'key' => $stepKey,
+                'label' => $stepInfo['label'],
+                'status' => $stepData['status'] ?? 'pending',
+                'message' => $stepData['message'] ?? '',
+            ];
+        }
+
+        $overallStatus = $isComplete ? 'completed' : ($upgradeLog->getStatus() === 'failed' ? 'failed' : 'running');
+
+        $data = [
+            'token' => $existing['token'] ?? '',
+            'upgrade_id' => (int) $upgradeLog->getUpgradeId(),
+            'from_version' => $upgradeLog->getFromVersion(),
+            'to_version' => $upgradeLog->getToVersion(),
+            'status' => $overallStatus,
+            'progress_percent' => $percent,
+            'current_step' => $upgradeLog->getCurrentStep(),
+            'steps' => $steps,
+            'error_message' => $upgradeLog->getErrorMessage(),
+        ];
+
+        file_put_contents($filePath, json_encode($data, JSON_PRETTY_PRINT));
+    }
+
+    private function getProgressFilePath(): string
+    {
+        return $this->directoryList->getPath(DirectoryList::VAR_DIR) . '/' . self::PROGRESS_FILE;
     }
 }
