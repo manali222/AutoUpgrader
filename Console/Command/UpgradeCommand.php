@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace MageUpgrade\AutoUpgrader\Console\Command;
 
 use MageUpgrade\AutoUpgrader\Api\UpgradeManagerInterface;
+use MageUpgrade\AutoUpgrader\Api\ProgressTrackerInterface;
 use MageUpgrade\AutoUpgrader\Api\Data\UpgradeLogInterface;
-use MageUpgrade\AutoUpgrader\Service\ProgressTracker;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,7 +19,7 @@ class UpgradeCommand extends Command
 {
     public function __construct(
         private readonly UpgradeManagerInterface $upgradeManager,
-        private readonly ProgressTracker $progressTracker
+        private readonly ProgressTrackerInterface $progressTracker
     ) {
         parent::__construct();
     }
@@ -30,9 +30,7 @@ class UpgradeCommand extends Command
             ->setDescription('Execute automated Magento upgrade to target version')
             ->addArgument('target_version', InputArgument::REQUIRED, 'Target Magento version')
             ->addOption('no-patches', null, InputOption::VALUE_NONE, 'Skip patch inclusion')
-            ->addOption('yes', 'y', InputOption::VALUE_NONE, 'Skip confirmation prompt')
-            ->addOption('upgrade-id', null, InputOption::VALUE_REQUIRED, 'Existing upgrade ID (for background mode)')
-            ->addOption('token', null, InputOption::VALUE_REQUIRED, 'Progress file token (for background mode)');
+            ->addOption('yes', 'y', InputOption::VALUE_NONE, 'Skip confirmation prompt');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -41,47 +39,9 @@ class UpgradeCommand extends Command
         $targetVersion = $input->getArgument('target_version');
         $includePatches = !$input->getOption('no-patches');
         $autoConfirm = $input->getOption('yes');
-        $upgradeId = $input->getOption('upgrade-id');
-        $token = $input->getOption('token');
-
-        // Background mode: upgrade-id and token provided by the admin controller
-        $backgroundMode = ($upgradeId !== null && $token !== null);
 
         $io->title('AutoUpgrader - Upgrade to ' . $targetVersion);
 
-        if ($backgroundMode) {
-            return $this->executeBackground($io, (int) $upgradeId);
-        }
-
-        return $this->executeInteractive($io, $input, $output, $targetVersion, $includePatches, $autoConfirm);
-    }
-
-    private function executeBackground(SymfonyStyle $io, int $upgradeId): int
-    {
-        $io->text("Background mode: upgrade_id=$upgradeId");
-
-        $upgradeLog = $this->upgradeManager->confirmAndExecute($upgradeId);
-
-        // Write final state to progress file
-        $this->progressTracker->updateFileProgress($upgradeId);
-
-        if ($upgradeLog->getStatus() === UpgradeLogInterface::STATUS_COMPLETED) {
-            $io->success('Upgrade completed successfully!');
-            return Command::SUCCESS;
-        }
-
-        $io->error('Upgrade failed: ' . $upgradeLog->getErrorMessage());
-        return Command::FAILURE;
-    }
-
-    private function executeInteractive(
-        SymfonyStyle $io,
-        InputInterface $input,
-        OutputInterface $output,
-        string $targetVersion,
-        bool $includePatches,
-        bool $autoConfirm
-    ): int {
         // Step 1: Scan and prepare
         $io->section('Phase 1: Scanning and preparing upgrade...');
         $upgradeLog = $this->upgradeManager->startUpgrade($targetVersion, $includePatches);

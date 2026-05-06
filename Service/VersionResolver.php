@@ -12,7 +12,7 @@ use Psr\Log\LoggerInterface;
 
 class VersionResolver implements VersionResolverInterface
 {
-    private const PACKAGIST_API = 'https://repo.packagist.org/p2/magento/project-community-edition.json';
+    private const GITHUB_API = 'https://api.github.com/repos/magento/magento2/tags?per_page=50';
 
     public function __construct(
         private readonly ProductMetadataInterface $productMetadata,
@@ -28,40 +28,55 @@ class VersionResolver implements VersionResolverInterface
         $versions = [];
 
         try {
-            $this->curl->get(self::PACKAGIST_API);
+            $this->curl->addHeader('User-Agent', 'MageUpgrade-AutoUpgrader/1.0');
+            $this->curl->addHeader('Accept', 'application/vnd.github.v3+json');
+            $this->curl->get(self::GITHUB_API);
             $response = $this->curl->getBody();
-            $data = $this->json->unserialize($response);
+            $tags = $this->json->unserialize($response);
 
-            $packages = $data['packages']['magento/project-community-edition'] ?? [];
-
-            foreach ($packages as $package) {
-                $version = $package['version'] ?? '';
-                // Only include stable versions newer than current
-                if ($this->isValidUpgradeTarget($version, $currentVersion)) {
-                    $versions[] = [
-                        'version' => $version,
-                        'php_requirement' => $package['require']['php'] ?? 'N/A',
-                        'release_date' => $package['time'] ?? '',
-                        'is_patch' => str_contains($version, '-p'),
-                        'is_security' => str_contains(strtolower($package['description'] ?? ''), 'security'),
-                    ];
+            if (is_array($tags)) {
+                foreach ($tags as $tag) {
+                    $version = ltrim($tag['name'] ?? '', 'v');
+                    if ($this->isValidUpgradeTarget($version, $currentVersion)) {
+                        $versions[] = [
+                            'version' => $version,
+                            'php_requirement' => $this->getPhpRequirement($version),
+                            'release_date' => '',
+                            'is_patch' => str_contains($version, '-p'),
+                            'is_security' => str_contains($version, '-p'),
+                        ];
+                    }
                 }
             }
 
             // Sort newest first
-            usort($versions, fn(array $a, array $b) => version_compare($b['version'], $a['version']));
+            usort($versions, fn(array $a, array $b) => version_compare(
+                $this->normalizePatchVersion($b['version']),
+                $this->normalizePatchVersion($a['version'])
+            ));
         } catch (\Exception $e) {
-            $this->logger->error('AutoUpgrader: Failed to fetch versions from Packagist', [
+            $this->logger->error('AutoUpgrader: Failed to fetch versions from GitHub', [
                 'error' => $e->getMessage()
             ]);
         }
 
-        // Merge with fallback versions if API returned nothing useful
+        // Fallback if API returned nothing (offline, rate-limited, etc.)
         if (empty($versions)) {
             $versions = $this->getFallbackVersions($currentVersion);
         }
 
         return $versions;
+    }
+
+    private function getPhpRequirement(string $version): string
+    {
+        $base = preg_replace('/-p\d+$/', '', $version);
+        return match (true) {
+            version_compare($base, '2.4.8', '>=') => '~8.3.0 || ~8.4.0',
+            version_compare($base, '2.4.7', '>=') => '~8.2.0 || ~8.3.0',
+            version_compare($base, '2.4.6', '>=') => '~8.1.0 || ~8.2.0',
+            default => '~8.1.0',
+        };
     }
 
     public function getCurrentVersion(): string
@@ -91,27 +106,44 @@ class VersionResolver implements VersionResolverInterface
             return false;
         }
         // Must be newer than current
-        return version_compare($version, $currentVersion, '>');
+        // PHP's version_compare treats -p as pre-release (lower), so we
+        // normalize "2.4.8-p2" → "2.4.8.2" for correct comparison
+        return version_compare(
+            $this->normalizePatchVersion($version),
+            $this->normalizePatchVersion($currentVersion),
+            '>'
+        );
+    }
+
+    /**
+     * Convert Magento patch notation to dot notation for proper comparison.
+     * "2.4.8"    → "2.4.8.0"
+     * "2.4.8-p3" → "2.4.8.3"
+     */
+    private function normalizePatchVersion(string $version): string
+    {
+        if (preg_match('/^(.+)-p(\d+)$/', $version, $m)) {
+            return $m[1] . '.' . $m[2];
+        }
+        return $version . '.0';
     }
 
     private function getFallbackVersions(string $currentVersion): array
     {
         $knownVersions = [
-            '2.4.8', '2.4.8-p1', '2.4.8-p2', '2.4.8-p3', '2.4.8-p4',
-            '2.4.7-p5', '2.4.7-p4', '2.4.7-p3', '2.4.7-p2', '2.4.7-p1', '2.4.7',
-            '2.4.6-p8', '2.4.6-p7', '2.4.6-p6', '2.4.6-p5', '2.4.6-p4', '2.4.6-p3', '2.4.6-p2', '2.4.6-p1', '2.4.6',
-            '2.4.5-p10', '2.4.5-p9', '2.4.5-p8', '2.4.5-p7', '2.4.5-p6', '2.4.5-p5', '2.4.5-p4', '2.4.5-p3', '2.4.5-p2', '2.4.5-p1', '2.4.5',
+            '2.4.9', '2.4.8-p5', '2.4.8-p4', '2.4.8-p3', '2.4.8-p2', '2.4.8-p1', '2.4.8',
+            '2.4.7-p4', '2.4.7-p3', '2.4.7-p2', '2.4.7-p1', '2.4.7',
         ];
 
         $versions = [];
         foreach ($knownVersions as $v) {
-            if (version_compare($v, $currentVersion, '>')) {
+            if ($this->isValidUpgradeTarget($v, $currentVersion)) {
                 $versions[] = [
                     'version' => $v,
                     'php_requirement' => 'Check release notes',
                     'release_date' => '',
                     'is_patch' => str_contains($v, '-p'),
-                    'is_security' => false,
+                    'is_security' => str_contains($v, '-p'),
                 ];
             }
         }
