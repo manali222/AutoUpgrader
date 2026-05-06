@@ -89,12 +89,18 @@ class Execute extends Action
             $this->upgradeLogResource->save($log);
             $this->updateStep($upgradeId, $log, 'backup', 'completed', 10, 'Backup created: ' . $backup['size']);
 
-            // ── Step 2: Auto-fix ──
+            // ── Step 2: Auto-fix (non-fatal) ──
             if ($scanId) {
                 $this->updateStep($upgradeId, $log, 'auto_fix', 'running', 15, 'Applying auto-fixes...');
-                $fixResult = $this->autoFixer->applyFixes($scanId);
-                $this->updateStep($upgradeId, $log, 'auto_fix', 'completed', 20,
-                    'Fixed ' . $fixResult['fixed_count'] . ' issues, ' . $fixResult['failed_count'] . ' failed');
+                try {
+                    $fixResult = $this->autoFixer->applyFixes($scanId);
+                    $this->updateStep($upgradeId, $log, 'auto_fix', 'completed', 20,
+                        'Fixed ' . $fixResult['fixed_count'] . ' issues, ' . $fixResult['failed_count'] . ' failed');
+                } catch (\Exception $e) {
+                    $this->logger->warning('AutoFixer failed, continuing upgrade', ['error' => $e->getMessage()]);
+                    $this->updateStep($upgradeId, $log, 'auto_fix', 'completed', 20,
+                        'Auto-fix skipped: ' . $e->getMessage());
+                }
             } else {
                 $this->updateStep($upgradeId, $log, 'auto_fix', 'completed', 20, 'No scan - skipped');
             }

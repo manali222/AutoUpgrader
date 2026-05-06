@@ -16,17 +16,17 @@ class ProgressTracker implements ProgressTrackerInterface
 {
     private const PROGRESS_FILE = 'autoupgrader_progress.json';
 
+    // Keys must match what Execute.php passes to updateStep() and the JS timeline IDs (ts-{key})
     private const STEPS_ORDER = [
-        self::STEP_BACKUP => ['label' => 'Creating Backup', 'weight' => 10],
-        self::STEP_SCAN => ['label' => 'Compatibility Scan', 'weight' => 10],
-        self::STEP_AUTO_FIX => ['label' => 'Auto-Fixing Issues', 'weight' => 10],
-        self::STEP_EXTENSIONS => ['label' => 'Upgrading Extensions', 'weight' => 15],
-        self::STEP_COMPOSER => ['label' => 'Composer Update', 'weight' => 20],
-        self::STEP_SETUP => ['label' => 'Setup Upgrade', 'weight' => 10],
-        self::STEP_COMPILE => ['label' => 'DI Compilation', 'weight' => 10],
-        self::STEP_STATIC => ['label' => 'Static Content Deploy', 'weight' => 10],
-        self::STEP_CACHE => ['label' => 'Cache Flush', 'weight' => 2],
-        self::STEP_VERIFY => ['label' => 'Verification', 'weight' => 3],
+        'backup' => ['label' => 'Creating Backup', 'weight' => 10],
+        'auto_fix' => ['label' => 'Auto-Fixing Issues', 'weight' => 10],
+        'extensions' => ['label' => 'Upgrading Extensions', 'weight' => 15],
+        'composer' => ['label' => 'Composer Update', 'weight' => 20],
+        'setup' => ['label' => 'Setup Upgrade', 'weight' => 10],
+        'compile' => ['label' => 'DI Compilation', 'weight' => 10],
+        'static' => ['label' => 'Static Content Deploy', 'weight' => 10],
+        'cache' => ['label' => 'Cache Flush', 'weight' => 2],
+        'verify' => ['label' => 'Verification', 'weight' => 3],
     ];
 
     public function __construct(
@@ -107,7 +107,8 @@ class ProgressTracker implements ProgressTrackerInterface
         $this->upgradeLogResource->save($upgradeLog);
 
         // Also write to JSON file for pub/autoupgrader_status.php polling
-        $this->writeProgressFile($upgradeLog, $stepsLog, $percent, $status === 'completed' && $step === self::STEP_VERIFY);
+        $isComplete = ($status === 'completed' && $step === 'verify') || $percent >= 100;
+        $this->writeProgressFile($upgradeLog, $stepsLog, $percent, $isComplete);
     }
 
     /**
