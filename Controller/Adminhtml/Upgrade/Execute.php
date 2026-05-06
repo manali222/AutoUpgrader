@@ -142,7 +142,7 @@ class Execute extends Action
             }
 
             $this->updateStep($upgradeId, $log, 'composer', 'running', 45, 'Running composer update (this may take a while)...');
-            $cmd = sprintf('cd %s && composer update --no-interaction 2>&1', escapeshellarg($rootDir));
+            $cmd = sprintf('cd %s && composer update --with-all-dependencies --no-interaction 2>&1', escapeshellarg($rootDir));
             $this->runCommand($cmd, 'composer update');
             $this->updateStep($upgradeId, $log, 'composer', 'completed', 55, 'Composer update completed');
 

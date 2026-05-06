@@ -25,47 +25,100 @@ class VersionResolver implements VersionResolverInterface
     public function getAvailableVersions(): array
     {
         $currentVersion = $this->getCurrentVersion();
+        $composerVersions = $this->getComposerAvailableVersions();
         $versions = [];
 
-        try {
-            $this->curl->addHeader('User-Agent', 'MageUpgrade-AutoUpgrader/1.0');
-            $this->curl->addHeader('Accept', 'application/vnd.github.v3+json');
-            $this->curl->get(self::GITHUB_API);
-            $response = $this->curl->getBody();
-            $tags = $this->json->unserialize($response);
-
-            if (is_array($tags)) {
-                foreach ($tags as $tag) {
-                    $version = ltrim($tag['name'] ?? '', 'v');
-                    if ($this->isValidUpgradeTarget($version, $currentVersion)) {
-                        $versions[] = [
-                            'version' => $version,
-                            'php_requirement' => $this->getPhpRequirement($version),
-                            'release_date' => '',
-                            'is_patch' => str_contains($version, '-p'),
-                            'is_security' => str_contains($version, '-p'),
-                        ];
-                    }
+        // If we got versions from Composer repo, use those as the source of truth
+        if (!empty($composerVersions)) {
+            foreach ($composerVersions as $version) {
+                if ($this->isValidUpgradeTarget($version, $currentVersion)) {
+                    $versions[] = [
+                        'version' => $version,
+                        'php_requirement' => $this->getPhpRequirement($version),
+                        'release_date' => '',
+                        'is_patch' => str_contains($version, '-p'),
+                        'is_security' => str_contains($version, '-p'),
+                    ];
                 }
             }
-
-            // Sort newest first
-            usort($versions, fn(array $a, array $b) => version_compare(
-                $this->normalizePatchVersion($b['version']),
-                $this->normalizePatchVersion($a['version'])
-            ));
-        } catch (\Exception $e) {
-            $this->logger->error('AutoUpgrader: Failed to fetch versions from GitHub', [
-                'error' => $e->getMessage()
-            ]);
         }
 
-        // Fallback if API returned nothing (offline, rate-limited, etc.)
+        // Fallback: try GitHub tags, but validate against Composer if available
         if (empty($versions)) {
-            $versions = $this->getFallbackVersions($currentVersion);
+            try {
+                $this->curl->addHeader('User-Agent', 'MageUpgrade-AutoUpgrader/1.0');
+                $this->curl->addHeader('Accept', 'application/vnd.github.v3+json');
+                $this->curl->get(self::GITHUB_API);
+                $response = $this->curl->getBody();
+                $tags = $this->json->unserialize($response);
+
+                if (is_array($tags)) {
+                    foreach ($tags as $tag) {
+                        $version = ltrim($tag['name'] ?? '', 'v');
+                        if ($this->isValidUpgradeTarget($version, $currentVersion)) {
+                            // If we have composer data, only include versions that exist there
+                            if (!empty($composerVersions) && !in_array($version, $composerVersions, true)) {
+                                continue;
+                            }
+                            $versions[] = [
+                                'version' => $version,
+                                'php_requirement' => $this->getPhpRequirement($version),
+                                'release_date' => '',
+                                'is_patch' => str_contains($version, '-p'),
+                                'is_security' => str_contains($version, '-p'),
+                            ];
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                $this->logger->error('AutoUpgrader: Failed to fetch versions from GitHub', [
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        // Sort newest first
+        usort($versions, fn(array $a, array $b) => version_compare(
+            $this->normalizePatchVersion($b['version']),
+            $this->normalizePatchVersion($a['version'])
+        ));
+
+        // Last resort fallback filtered by Composer availability
+        if (empty($versions)) {
+            $versions = $this->getFallbackVersions($currentVersion, $composerVersions);
         }
 
         return $versions;
+    }
+
+    /**
+     * Get versions available in the Composer repo (repo.magento.com).
+     */
+    private function getComposerAvailableVersions(): array
+    {
+        try {
+            $output = [];
+            $returnCode = 0;
+            exec('composer show magento/product-community-edition --available --name-only --format=json 2>/dev/null', $output, $returnCode);
+
+            if ($returnCode !== 0 || empty($output)) {
+                return [];
+            }
+
+            $json = implode('', $output);
+            $data = json_decode($json, true);
+
+            if (!is_array($data) || empty($data['versions'])) {
+                return [];
+            }
+
+            return $data['versions'];
+        } catch (\Exception $e) {
+            $this->logger->warning('AutoUpgrader: Could not query Composer for available versions', [
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
     }
 
     private function getPhpRequirement(string $version): string
@@ -128,7 +181,7 @@ class VersionResolver implements VersionResolverInterface
         return $version . '.0';
     }
 
-    private function getFallbackVersions(string $currentVersion): array
+    private function getFallbackVersions(string $currentVersion, array $composerVersions = []): array
     {
         $knownVersions = [
             '2.4.9', '2.4.8-p5', '2.4.8-p4', '2.4.8-p3', '2.4.8-p2', '2.4.8-p1', '2.4.8',
@@ -137,15 +190,20 @@ class VersionResolver implements VersionResolverInterface
 
         $versions = [];
         foreach ($knownVersions as $v) {
-            if ($this->isValidUpgradeTarget($v, $currentVersion)) {
-                $versions[] = [
-                    'version' => $v,
-                    'php_requirement' => 'Check release notes',
-                    'release_date' => '',
-                    'is_patch' => str_contains($v, '-p'),
-                    'is_security' => str_contains($v, '-p'),
-                ];
+            if (!$this->isValidUpgradeTarget($v, $currentVersion)) {
+                continue;
             }
+            // If we have Composer data, only include versions that exist there
+            if (!empty($composerVersions) && !in_array($v, $composerVersions, true)) {
+                continue;
+            }
+            $versions[] = [
+                'version' => $v,
+                'php_requirement' => $this->getPhpRequirement($v),
+                'release_date' => '',
+                'is_patch' => str_contains($v, '-p'),
+                'is_security' => str_contains($v, '-p'),
+            ];
         }
         return $versions;
     }
