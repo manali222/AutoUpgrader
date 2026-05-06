@@ -91,14 +91,24 @@ class AutoFixer implements AutoFixerInterface
     private function fixIssue(array $issue): bool
     {
         $filePath = $issue['file_path'] ?? '';
-        if (!file_exists($filePath) || !is_writable($filePath)) {
-            return false;
+        $category = $issue['category'] ?? '';
+
+        if (empty($filePath)) {
+            throw new \RuntimeException('No file path specified for issue');
+        }
+
+        if (!file_exists($filePath)) {
+            throw new \RuntimeException("File not found: {$filePath}");
+        }
+
+        if (!is_writable($filePath)) {
+            throw new \RuntimeException("File not writable: {$filePath}");
         }
 
         $content = file_get_contents($filePath);
         $originalContent = $content;
 
-        switch ($issue['category'] ?? '') {
+        switch ($category) {
             case 'deprecated_class':
                 $content = $this->fixDeprecatedClass($content, $issue);
                 break;
@@ -112,14 +122,20 @@ class AutoFixer implements AutoFixerInterface
                 break;
 
             case 'composer_constraint':
-                $content = $this->fixComposerConstraint($filePath, $issue);
+                $this->fixComposerConstraint($filePath, $issue);
                 return true;
 
             default:
-                return false;
+                throw new \RuntimeException("Unknown fix category: {$category}");
         }
 
         if ($content === $originalContent) {
+            $this->logger->info('AutoFixer: no changes made', [
+                'file' => $filePath,
+                'category' => $category,
+                'old_value' => $issue['old_value'] ?? '',
+                'new_value' => $issue['new_value'] ?? '',
+            ]);
             return false;
         }
 

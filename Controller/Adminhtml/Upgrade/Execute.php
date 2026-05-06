@@ -121,14 +121,25 @@ class Execute extends Action
             // ── Step 4: Composer require + update ──
             $log->setStatus(UpgradeLogInterface::STATUS_UPGRADING);
             $this->upgradeLogResource->save($log);
-            $this->updateStep($upgradeId, $log, 'composer', 'running', 35, 'Running composer require...');
+            $this->updateStep($upgradeId, $log, 'composer', 'running', 35, 'Running composer require-commerce...');
 
+            // Use require-commerce (required for Composer >= 2.1.6 with Magento metapackages)
             $cmd = sprintf(
-                'cd %s && composer require magento/product-community-edition=%s --no-update 2>&1',
+                'cd %s && composer require-commerce magento/product-community-edition %s --no-update 2>&1',
                 escapeshellarg($rootDir),
                 escapeshellarg($targetVersion)
             );
-            $this->runCommand($cmd, 'composer require');
+            $requireResult = $this->runCommand($cmd, 'composer require-commerce', false);
+
+            // Fallback to regular require if require-commerce is not available
+            if ($requireResult['code'] !== 0) {
+                $cmd = sprintf(
+                    'cd %s && composer require magento/product-community-edition=%s --no-update 2>&1',
+                    escapeshellarg($rootDir),
+                    escapeshellarg($targetVersion)
+                );
+                $this->runCommand($cmd, 'composer require');
+            }
 
             $this->updateStep($upgradeId, $log, 'composer', 'running', 45, 'Running composer update (this may take a while)...');
             $cmd = sprintf('cd %s && composer update --no-interaction 2>&1', escapeshellarg($rootDir));
