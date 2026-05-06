@@ -25,32 +25,6 @@ class ExtensionManager implements ExtensionManagerInterface
     ) {
     }
 
-    /**
-     * Core Magento packages to skip during extension checks
-     */
-    private const CORE_PACKAGE_PREFIXES = [
-        'magento/module-',
-        'magento/framework',
-        'magento/language-',
-        'magento/theme-',
-        'magento/magento2-',
-        'magento/magento-',
-        'magento/composer',
-        'magento/inventory',
-        'magento/page-builder',
-        'magento/security-package',
-        'magento/data-migration',
-    ];
-
-    private const CORE_PACKAGES = [
-        'magento/services-connector',
-        'magento/services-id',
-        'magento/quality-patches',
-        'magento/ece-tools',
-        'magento/product-community-edition',
-        'magento/product-enterprise-edition',
-    ];
-
     public function getInstalledExtensions(): array
     {
         $extensions = [];
@@ -58,7 +32,11 @@ class ExtensionManager implements ExtensionManagerInterface
 
         foreach ($installedPackages as $packageName => $packageData) {
             // Skip core Magento packages
-            if ($this->isCorePackage($packageName)) {
+            if (str_starts_with($packageName, 'magento/module-')
+                || str_starts_with($packageName, 'magento/framework')
+                || str_starts_with($packageName, 'magento/language-')
+                || str_starts_with($packageName, 'magento/theme-')
+            ) {
                 continue;
             }
 
@@ -154,58 +132,14 @@ class ExtensionManager implements ExtensionManagerInterface
         }
     }
 
-    private function isCorePackage(string $packageName): bool
-    {
-        if (in_array($packageName, self::CORE_PACKAGES, true)) {
-            return true;
-        }
-
-        foreach (self::CORE_PACKAGE_PREFIXES as $prefix) {
-            if (str_starts_with($packageName, $prefix)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private function findCompatibleVersion(string $packageName, string $targetMagentoVersion): array
-    {
-        // First try public Packagist
-        $result = $this->checkPackagist($packageName, $targetMagentoVersion);
-        if ($result['status'] === 'compatible') {
-            return $result;
-        }
-
-        // If not found on Packagist, check if it's a Magento marketplace/repo package
-        if (str_starts_with($packageName, 'paypal/') || str_starts_with($packageName, 'magento/')) {
-            return [
-                'version' => 'latest',
-                'status' => 'compatible',
-                'action' => 'Will be updated via composer during upgrade',
-            ];
-        }
-
-        return $result;
-    }
-
-    private function checkPackagist(string $packageName, string $targetMagentoVersion): array
     {
         try {
             $url = "https://repo.packagist.org/p2/{$packageName}.json";
             $this->curl->get($url);
-            $statusCode = $this->curl->getStatus();
             $response = $this->curl->getBody();
-
-            if ($statusCode === 404 || empty($response)) {
-                return [
-                    'version' => null,
-                    'status' => 'not_on_packagist',
-                    'action' => 'Package not on public Packagist - will check during upgrade',
-                ];
-            }
-
             $data = $this->json->unserialize($response);
+
             $packages = $data['packages'][$packageName] ?? [];
 
             // Find the latest version that's compatible with the target Magento version
@@ -220,16 +154,6 @@ class ExtensionManager implements ExtensionManagerInterface
                         'action' => "Upgrade to {$pkg['version']}",
                     ];
                 }
-            }
-
-            // Check if any version exists - if package exists but no compatible version
-            if (!empty($packages)) {
-                $latestVersion = $packages[0]['version'] ?? 'unknown';
-                return [
-                    'version' => null,
-                    'status' => 'no_compatible_version',
-                    'action' => "Latest is {$latestVersion} - contact vendor for compatible version",
-                ];
             }
 
             return [
