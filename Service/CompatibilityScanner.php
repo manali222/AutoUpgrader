@@ -402,6 +402,10 @@ class CompatibilityScanner implements CompatibilityScannerInterface
 
         foreach ($iterator as $file) {
             if ($file->isFile() && fnmatch($pattern, $file->getFilename())) {
+                // Skip our own module to avoid false positives from string literals
+                if (str_contains($file->getPathname(), 'MageUpgrade/AutoUpgrader')) {
+                    continue;
+                }
                 $files[] = $file->getPathname();
             }
         }
