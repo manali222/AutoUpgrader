@@ -124,9 +124,12 @@ class Execute extends Action
             $this->updateStep($upgradeId, $log, 'composer', 'running', 35, 'Running composer require-commerce...');
 
             // Use require-commerce (required for Composer >= 2.1.6 with Magento metapackages)
+            // COMPOSER_CACHE_DIR=/dev/null bypasses stale repo cache
+            $envPrefix = 'COMPOSER_CACHE_DIR=/dev/null';
             $cmd = sprintf(
-                'cd %s && composer require-commerce magento/product-community-edition %s --no-update 2>&1',
+                'cd %s && %s composer require-commerce magento/product-community-edition %s --no-update 2>&1',
                 escapeshellarg($rootDir),
+                $envPrefix,
                 escapeshellarg($targetVersion)
             );
             $requireResult = $this->runCommand($cmd, 'composer require-commerce', false);
@@ -134,15 +137,16 @@ class Execute extends Action
             // Fallback to regular require if require-commerce is not available
             if ($requireResult['code'] !== 0) {
                 $cmd = sprintf(
-                    'cd %s && composer require magento/product-community-edition=%s --no-update 2>&1',
+                    'cd %s && %s composer require magento/product-community-edition=%s --no-update 2>&1',
                     escapeshellarg($rootDir),
+                    $envPrefix,
                     escapeshellarg($targetVersion)
                 );
                 $this->runCommand($cmd, 'composer require');
             }
 
             $this->updateStep($upgradeId, $log, 'composer', 'running', 45, 'Running composer update (this may take a while)...');
-            $cmd = sprintf('cd %s && composer update --with-all-dependencies --no-interaction 2>&1', escapeshellarg($rootDir));
+            $cmd = sprintf('cd %s && %s composer update --with-all-dependencies --no-interaction 2>&1', escapeshellarg($rootDir), $envPrefix);
             $this->runCommand($cmd, 'composer update');
             $this->updateStep($upgradeId, $log, 'composer', 'completed', 55, 'Composer update completed');
 

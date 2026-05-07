@@ -99,7 +99,8 @@ class VersionResolver implements VersionResolverInterface
         try {
             $output = [];
             $returnCode = 0;
-            exec('composer show magento/product-community-edition --available --name-only --format=json 2>/dev/null', $output, $returnCode);
+            // Use COMPOSER_CACHE_DIR=/dev/null to bypass stale cache
+            exec('COMPOSER_CACHE_DIR=/dev/null composer show magento/product-community-edition --available --format=json 2>/dev/null', $output, $returnCode);
 
             if ($returnCode !== 0 || empty($output)) {
                 return [];
