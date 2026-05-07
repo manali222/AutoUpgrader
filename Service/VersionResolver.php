@@ -84,7 +84,8 @@ class VersionResolver implements VersionResolverInterface
         ));
 
         // Last resort fallback filtered by Composer availability
-        if (empty($versions)) {
+        // If Composer returned versions but none were valid upgrade targets, don't fall back
+        if (empty($versions) && empty($composerVersions)) {
             $versions = $this->getFallbackVersions($currentVersion, $composerVersions);
         }
 
@@ -99,10 +100,22 @@ class VersionResolver implements VersionResolverInterface
         try {
             $output = [];
             $returnCode = 0;
+            $rootDir = '';
+
+            // Try to get Magento root for proper composer context
+            if (defined('BP')) {
+                $rootDir = 'cd ' . escapeshellarg(BP) . ' && ';
+            }
+
             // Use COMPOSER_CACHE_DIR=/dev/null to bypass stale cache
-            exec('COMPOSER_CACHE_DIR=/dev/null composer show magento/product-community-edition --available --format=json 2>/dev/null', $output, $returnCode);
+            // Use timeout to prevent blocking page load
+            $cmd = $rootDir . 'COMPOSER_CACHE_DIR=/dev/null timeout 30 composer show magento/product-community-edition --available --format=json 2>/dev/null';
+            exec($cmd, $output, $returnCode);
 
             if ($returnCode !== 0 || empty($output)) {
+                $this->logger->info('AutoUpgrader: Composer version query returned no data', [
+                    'return_code' => $returnCode
+                ]);
                 return [];
             }
 
